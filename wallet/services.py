@@ -63,6 +63,13 @@ def validar_limites_deposito(user, perfil, monto):
             )
 
 
+def obtener_perfil_usuario(user):
+    """Obtiene el perfil del usuario o lanza ValidationError si no tiene uno."""
+    if not hasattr(user, "perfil") or user.perfil is None:
+        raise ValidationError("El usuario no tiene un perfil asociado.")
+    return user.perfil
+
+
 def validar_monto_positivo(amount):
     monto = Decimal(str(amount))
     if monto <= 0:
@@ -74,7 +81,7 @@ def validar_monto_positivo(amount):
 def recargar(user, amount):
     """Acredita fichas al usuario (DEBIT casa -> CREDIT wallet_usuario)."""
     monto = validar_monto_positivo(amount)
-    perfil = user.perfil
+    perfil = obtener_perfil_usuario(user)
     perfil.aplicar_limite_pendiente()
     validar_limites_deposito(user, perfil, monto)
 
@@ -89,6 +96,7 @@ def recargar(user, amount):
 def retirar(user, amount):
     """Debita fichas del usuario (DEBIT wallet_usuario -> CREDIT casa)"""
     monto = validar_monto_positivo(amount)
+    obtener_perfil_usuario(user)
 
     LedgerEntry.objects.select_for_update().filter(
         usuario=user, cuenta=TipoCuenta.WALLET_USUARIO
@@ -111,6 +119,8 @@ def retirar(user, amount):
 def transferencia_interna(user, cuenta_origen, cuenta_destino, amount):
     """Mueve fondos entre dos cuentas del mismo usuario (DEBIT cuenta_origen -> CREDIT cuenta_destino)."""
     monto = validar_monto_positivo(amount)
+    obtener_perfil_usuario(user)
+
     if cuenta_origen == cuenta_destino:
         raise ValidationError("Las cuentas de origen y destino no pueden ser iguales.")
 

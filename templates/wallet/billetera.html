@@ -1,0 +1,197 @@
+{% extends 'base.html' %}
+{% block title %}Mi Billetera — FairBet Lab{% endblock %}
+
+{% block content %}
+<div class="w-full max-w-2xl space-y-6">
+
+  <!-- Mensajes Django -->
+  {% if messages %}
+  <div class="space-y-2">
+    {% for message in messages %}
+    <div class="p-3.5 rounded-lg text-sm flex items-start gap-3
+      {% if message.tags == 'error' %}bg-red-50 border border-red-200 text-red-800
+      {% else %}bg-emerald-50 border border-emerald-200 text-emerald-800{% endif %}">
+      <i data-lucide="{% if message.tags == 'error' %}alert-circle{% else %}check-circle{% endif %}"
+         class="w-4 h-4 shrink-0 mt-0.5"></i>
+      <span>{{ message }}</span>
+    </div>
+    {% endfor %}
+  </div>
+  {% endif %}
+
+  <!-- Encabezado -->
+  <div class="flex items-center gap-4 bg-white border border-slate-200 rounded-xl p-6 shadow-sm">
+    <div class="p-3 bg-slate-50 border border-slate-200 rounded-lg text-slate-700">
+      <i data-lucide="wallet" class="w-6 h-6"></i>
+    </div>
+    <div>
+      <h1 class="text-xl font-bold text-slate-900">Mi Billetera</h1>
+      <p class="text-slate-500 text-sm">Gestiona tus fichas de forma segura.</p>
+    </div>
+  </div>
+
+  <!-- Tarjetas de Saldo -->
+  <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+
+    <!-- Saldo Disponible -->
+    <div class="bg-white border border-slate-200 rounded-xl p-5 shadow-sm">
+      <div class="flex items-center gap-2 mb-3">
+        <i data-lucide="circle-dollar-sign" class="w-4 h-4 text-emerald-600"></i>
+        <span class="text-xs font-bold text-slate-400 uppercase tracking-wide">Disponible</span>
+      </div>
+      <p class="text-2xl font-bold text-slate-900">
+        {{ saldo_disponible|floatformat:2 }}
+        <span class="text-sm font-normal text-slate-500">fichas</span>
+      </p>
+    </div>
+
+    <!-- Apuestas Pendientes -->
+    <div class="bg-white border border-slate-200 rounded-xl p-5 shadow-sm">
+      <div class="flex items-center gap-2 mb-3">
+        <i data-lucide="lock" class="w-4 h-4 text-amber-500"></i>
+        <span class="text-xs font-bold text-slate-400 uppercase tracking-wide">En Apuestas</span>
+      </div>
+      <p class="text-2xl font-bold text-slate-900">
+        {{ saldo_apuestas|floatformat:2 }}
+        <span class="text-sm font-normal text-slate-500">fichas</span>
+      </p>
+    </div>
+
+    <!-- Bonos -->
+    <div class="bg-white border border-slate-200 rounded-xl p-5 shadow-sm">
+      <div class="flex items-center gap-2 mb-3">
+        <i data-lucide="gift" class="w-4 h-4 text-violet-500"></i>
+        <span class="text-xs font-bold text-slate-400 uppercase tracking-wide">Bonos</span>
+      </div>
+      <p class="text-2xl font-bold text-slate-900">
+        {{ saldo_bonos|floatformat:2 }}
+        <span class="text-sm font-normal text-slate-500">fichas</span>
+      </p>
+    </div>
+
+  </div>
+
+  <!-- Operaciones -->
+  <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+
+    <!-- Recarga -->
+    <div class="bg-white border border-slate-200 rounded-xl p-6 shadow-sm">
+      <div class="flex items-center gap-2 mb-4">
+        <i data-lucide="plus-circle" class="w-4 h-4 text-emerald-600"></i>
+        <h2 class="text-sm font-semibold text-slate-800">Recargar Fichas</h2>
+      </div>
+      <form method="post" action="{% url 'wallet_recargar' %}">
+        {% csrf_token %}
+        <div class="mb-4">
+          <label for="amount_recargar" class="block text-xs font-medium text-slate-500 mb-1.5">
+            Monto a recargar
+          </label>
+          <div class="relative">
+            <span class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm">
+              <i data-lucide="coins" class="w-4 h-4"></i>
+            </span>
+            <input
+              id="amount_recargar"
+              type="number"
+              name="amount"
+              step="0.01"
+              min="1"
+              placeholder="0.00"
+              required
+              class="w-full pl-9 pr-4 py-2.5 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-slate-900 focus:border-transparent"
+            />
+          </div>
+          {% if limite_diario %}
+          <p class="text-xs text-slate-400 mt-1.5">
+            Límite diario disponible:
+            <span class="font-semibold text-slate-600">{{ limite_disponible_hoy|floatformat:2 }} fichas</span>
+          </p>
+          {% endif %}
+        </div>
+        <button
+          type="submit"
+          class="w-full bg-slate-900 hover:bg-slate-800 text-white font-medium px-4 py-2.5 rounded-lg text-sm transition-colors flex items-center justify-center gap-2"
+        >
+          <i data-lucide="arrow-down-circle" class="w-4 h-4"></i>
+          Recargar
+        </button>
+      </form>
+    </div>
+
+    <!-- Retiro -->
+    <div class="bg-white border border-slate-200 rounded-xl p-6 shadow-sm">
+      <div class="flex items-center gap-2 mb-4">
+        <i data-lucide="minus-circle" class="w-4 h-4 text-red-500"></i>
+        <h2 class="text-sm font-semibold text-slate-800">Retirar Fichas</h2>
+      </div>
+      <form method="post" action="{% url 'wallet_retirar' %}">
+        {% csrf_token %}
+        <div class="mb-4">
+          <label for="amount_retirar" class="block text-xs font-medium text-slate-500 mb-1.5">
+            Monto a retirar
+          </label>
+          <div class="relative">
+            <span class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">
+              <i data-lucide="coins" class="w-4 h-4"></i>
+            </span>
+            <input
+              id="amount_retirar"
+              type="number"
+              name="amount"
+              step="0.01"
+              min="1"
+              placeholder="0.00"
+              required
+              class="w-full pl-9 pr-4 py-2.5 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-slate-900 focus:border-transparent"
+            />
+          </div>
+          <p class="text-xs text-slate-400 mt-1.5">
+            Máximo disponible:
+            <span class="font-semibold text-slate-600">{{ saldo_disponible|floatformat:2 }} fichas</span>
+          </p>
+        </div>
+        <button
+          type="submit"
+          class="w-full bg-white border border-slate-200 hover:bg-slate-50 text-slate-800 font-medium px-4 py-2.5 rounded-lg text-sm transition-colors flex items-center justify-center gap-2"
+        >
+          <i data-lucide="arrow-up-circle" class="w-4 h-4 text-red-500"></i>
+          Retirar
+        </button>
+      </form>
+    </div>
+
+  </div>
+
+  <!-- Límites de Depósito -->
+  <div class="bg-white border border-slate-200 rounded-xl p-6 shadow-sm">
+    <div class="flex items-center gap-2 border-b border-slate-100 pb-4 mb-4">
+      <i data-lucide="shield-check" class="w-4 h-4 text-slate-600"></i>
+      <h2 class="text-sm font-semibold text-slate-800">Juego Responsable — Límites de Depósito</h2>
+    </div>
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-4 text-center">
+      <div>
+        <span class="block text-xs font-bold text-slate-400 uppercase tracking-wide mb-1">Diario</span>
+        <span class="text-base font-semibold text-slate-900">
+          {{ user.perfil.limite_deposito_diario|floatformat:2 }}
+          <span class="text-xs font-normal text-slate-500">fichas</span>
+        </span>
+      </div>
+      <div>
+        <span class="block text-xs font-bold text-slate-400 uppercase tracking-wide mb-1">Semanal</span>
+        <span class="text-base font-semibold text-slate-900">
+          {{ user.perfil.limite_deposito_semanal|floatformat:2 }}
+          <span class="text-xs font-normal text-slate-500">fichas</span>
+        </span>
+      </div>
+      <div>
+        <span class="block text-xs font-bold text-slate-400 uppercase tracking-wide mb-1">Mensual</span>
+        <span class="text-base font-semibold text-slate-900">
+          {{ user.perfil.limite_deposito_mensual|floatformat:2 }}
+          <span class="text-xs font-normal text-slate-500">fichas</span>
+        </span>
+      </div>
+    </div>
+  </div>
+
+</div>
+{% endblock %}

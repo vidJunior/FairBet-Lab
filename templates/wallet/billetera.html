@@ -40,7 +40,7 @@
         <span class="text-xs font-bold text-slate-400 uppercase tracking-wide">Disponible</span>
       </div>
       <p class="text-2xl font-bold text-slate-900">
-        {{ saldo_disponible|floatformat:2 }}
+        {{ saldo_disponible|stringformat:".2f" }}
         <span class="text-sm font-normal text-slate-500">fichas</span>
       </p>
     </div>
@@ -52,7 +52,7 @@
         <span class="text-xs font-bold text-slate-400 uppercase tracking-wide">En Apuestas</span>
       </div>
       <p class="text-2xl font-bold text-slate-900">
-        {{ saldo_apuestas|floatformat:2 }}
+        {{ saldo_apuestas|stringformat:".2f" }}
         <span class="text-sm font-normal text-slate-500">fichas</span>
       </p>
     </div>
@@ -64,7 +64,7 @@
         <span class="text-xs font-bold text-slate-400 uppercase tracking-wide">Bonos</span>
       </div>
       <p class="text-2xl font-bold text-slate-900">
-        {{ saldo_bonos|floatformat:2 }}
+        {{ saldo_bonos|stringformat:".2f" }}
         <span class="text-sm font-normal text-slate-500">fichas</span>
       </p>
     </div>
@@ -104,7 +104,7 @@
           {% if limite_diario %}
           <p class="text-xs text-slate-400 mt-1.5">
             Límite diario disponible:
-            <span class="font-semibold text-slate-600">{{ limite_disponible_hoy|floatformat:2 }} fichas</span>
+            <span class="font-semibold text-slate-600">{{ limite_disponible_hoy|stringformat:".2f" }} fichas</span>
           </p>
           {% endif %}
         </div>
@@ -147,7 +147,7 @@
           </div>
           <p class="text-xs text-slate-400 mt-1.5">
             Máximo disponible:
-            <span class="font-semibold text-slate-600">{{ saldo_disponible|floatformat:2 }} fichas</span>
+            <span class="font-semibold text-slate-600">{{ saldo_disponible|stringformat:".2f" }} fichas</span>
           </p>
         </div>
         <button
@@ -172,21 +172,21 @@
       <div>
         <span class="block text-xs font-bold text-slate-400 uppercase tracking-wide mb-1">Diario</span>
         <span class="text-base font-semibold text-slate-900">
-          {{ user.perfil.limite_deposito_diario|floatformat:2 }}
+          {{ user.perfil.limite_deposito_diario|stringformat:".2f" }}
           <span class="text-xs font-normal text-slate-500">fichas</span>
         </span>
       </div>
       <div>
         <span class="block text-xs font-bold text-slate-400 uppercase tracking-wide mb-1">Semanal</span>
         <span class="text-base font-semibold text-slate-900">
-          {{ user.perfil.limite_deposito_semanal|floatformat:2 }}
+          {{ user.perfil.limite_deposito_semanal|stringformat:".2f" }}
           <span class="text-xs font-normal text-slate-500">fichas</span>
         </span>
       </div>
       <div>
         <span class="block text-xs font-bold text-slate-400 uppercase tracking-wide mb-1">Mensual</span>
         <span class="text-base font-semibold text-slate-900">
-          {{ user.perfil.limite_deposito_mensual|floatformat:2 }}
+          {{ user.perfil.limite_deposito_mensual|stringformat:".2f" }}
           <span class="text-xs font-normal text-slate-500">fichas</span>
         </span>
       </div>

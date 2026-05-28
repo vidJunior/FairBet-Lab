@@ -79,6 +79,10 @@ class Apuesta(models.Model):
     creado = models.DateTimeField(auto_now_add=True)
     actualizado = models.DateTimeField(auto_now=True)
 
+    @property
+    def payout(self):
+        return self.monto * self.cuota_fijada
+
     def clean(self):
         super().clean()
         if self.seleccion_id and self.seleccion.mercado.evento.estado != EstadoEvento.PROGRAMADO:

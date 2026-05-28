@@ -128,6 +128,13 @@ USE_I18N = True
 
 USE_TZ = True
 
+# Forzar el formato decimal con punto (.) y miles con coma (,)
+USE_L10N = False
+DECIMAL_SEPARATOR = "."
+THOUSAND_SEPARATOR = ","
+USE_THOUSAND_SEPARATOR = False
+
+
 
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/6.0/howto/static-files/

@@ -14,12 +14,21 @@
   <p class="text-slate-500 text-sm mb-6">
     Hola <span class="font-semibold text-slate-800">{{ user.username }}</span>. Ya estás autenticado en la plataforma.
   </p>
-  <a
-    href="{% url 'kyc_success_html' %}"
-    class="inline-flex items-center justify-center bg-slate-900 hover:bg-slate-800 text-white font-medium px-4 py-2.5 rounded-lg text-sm transition-colors gap-1.5 w-full"
-  >
-    <span>Ver mi Verificación KYC</span>
-    <i data-lucide="arrow-right" class="w-4 h-4"></i>
-  </a>
+  <div class="space-y-3">
+    <a
+      href="{% url 'catalogo_html' %}"
+      class="inline-flex items-center justify-center bg-indigo-600 hover:bg-indigo-700 text-white font-medium px-4 py-2.5 rounded-lg text-sm transition-colors gap-1.5 w-full"
+    >
+      <i data-lucide="trophy" class="w-4 h-4"></i>
+      <span>Catálogo de Apuestas Deportivas</span>
+    </a>
+    <a
+      href="{% url 'kyc_success_html' %}"
+      class="inline-flex items-center justify-center bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 font-medium px-4 py-2.5 rounded-lg text-sm transition-colors gap-1.5 w-full shadow-sm"
+    >
+      <span>Ver mi Verificación KYC</span>
+      <i data-lucide="arrow-right" class="w-4 h-4"></i>
+    </a>
+  </div>
 </div>
 {% endblock %}

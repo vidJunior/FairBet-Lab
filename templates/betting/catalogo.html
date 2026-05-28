@@ -1,0 +1,340 @@
+{% extends 'base.html' %}
+
+{% block title %}Catálogo de Apuestas - FairBet Lab{% endblock %}
+
+{% block content %}
+<div class="w-full max-w-5xl mx-auto px-4 grid grid-cols-1 md:grid-cols-3 gap-8">
+  
+  <!-- Columna del Catálogo (2/3 de la pantalla) -->
+  <div class="md:col-span-2 space-y-6">
+    <div class="flex items-center justify-between border-b border-slate-200 pb-4">
+      <h2 class="text-2xl font-bold text-slate-900 flex items-center gap-2">
+        <i data-lucide="trophy" class="w-6 h-6 text-indigo-600"></i>
+        <span>Eventos Deportivos Disponibles</span>
+      </h2>
+      <span class="bg-indigo-50 text-indigo-700 text-xs font-semibold px-3 py-1.5 rounded-full flex items-center gap-1">
+        <i data-lucide="coins" class="w-3.5 h-3.5"></i>
+        <span>Saldo: {{ saldo }} fichas</span>
+      </span>
+    </div>
+
+    <!-- Alertas y Mensajes de Éxito/Error -->
+    {% if messages %}
+      <div class="space-y-3">
+        {% for message in messages %}
+          <div class="p-4 rounded-xl text-sm font-medium border flex items-center gap-3 shadow-sm transition-all duration-300
+            {% if message.tags == 'success' %}
+              bg-emerald-50 text-emerald-800 border-emerald-200
+            {% else %}
+              bg-rose-50 text-rose-800 border-rose-200
+            {% endif %}">
+            {% if message.tags == 'success' %}
+              <i data-lucide="check-circle" class="w-5 h-5 text-emerald-600"></i>
+            {% else %}
+              <i data-lucide="alert-triangle" class="w-5 h-5 text-rose-600"></i>
+            {% endif %}
+            <span>{{ message }}</span>
+          </div>
+        {% endfor %}
+      </div>
+    {% endif %}
+
+    <!-- Listado de Partidos -->
+    {% if eventos %}
+      <div class="space-y-4">
+        {% for evento in eventos %}
+          <div class="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm hover:shadow-md transition-shadow">
+            <div class="flex justify-between items-center text-xs font-semibold text-slate-500 mb-3">
+              <span class="flex items-center gap-1.5">
+                <i data-lucide="calendar" class="w-3.5 h-3.5"></i>
+                {{ evento.fecha_inicio|date:"d M, Y - H:i" }}
+              </span>
+              <span class="px-2.5 py-1 rounded-full uppercase tracking-wider
+                {% if evento.estado == 'en_vivo' %}
+                  bg-rose-50 text-rose-700 border border-rose-100 animate-pulse
+                {% else %}
+                  bg-slate-100 text-slate-600
+                {% endif %}">
+                {{ evento.get_estado_display }}
+              </span>
+            </div>
+
+            <!-- Enfrentamiento -->
+            <div class="flex items-center justify-between py-2 mb-4">
+              <div class="flex-1 text-center md:text-left">
+                <span class="text-base font-bold text-slate-800 block">{{ evento.local }}</span>
+              </div>
+              <div class="px-4 text-center">
+                <span class="text-xs text-slate-400 font-bold uppercase tracking-widest block mb-1">VS</span>
+                {% if evento.estado == 'en_vivo' %}
+                  <span class="bg-slate-900 text-white font-mono text-sm px-2.5 py-1 rounded-lg">
+                    {{ evento.goles_local }} - {{ evento.goles_visitante }}
+                  </span>
+                {% endif %}
+              </div>
+              <div class="flex-1 text-center md:text-right">
+                <span class="text-base font-bold text-slate-800 block">{{ evento.visitante }}</span>
+              </div>
+            </div>
+
+            <!-- Mercados y Cuotas -->
+            {% for mercado in evento.mercados.all %}
+              {% if mercado.activo %}
+                <div class="border-t border-slate-100 pt-3">
+                  <span class="text-xs font-bold text-slate-400 uppercase tracking-wider block mb-2">{{ mercado.nombre }}</span>
+                  <div class="grid grid-cols-3 gap-3">
+                    {% for seleccion in mercado.selecciones.all %}
+                      <button 
+                        type="button" 
+                        onclick="seleccionarCuota('{{ seleccion.id }}', '{{ seleccion.nombre }}', '{{ seleccion.cuota }}', '{{ evento.local }} vs {{ evento.visitante }}')"
+                        class="bg-slate-50 border border-slate-200 hover:border-indigo-400 hover:bg-indigo-50/30 p-2.5 rounded-xl transition-all text-center flex flex-col justify-center items-center group">
+                        <span class="text-xs text-slate-500 font-medium group-hover:text-indigo-700 transition-colors">{{ seleccion.nombre }}</span>
+                        <span class="text-sm font-bold text-slate-800 group-hover:text-indigo-900 transition-colors mt-0.5">{{ seleccion.cuota }}</span>
+                      </button>
+                    {% endfor %}
+                  </div>
+                </div>
+              {% endif %}
+            {% endfor %}
+          </div>
+        {% endfor %}
+      </div>
+    {% else %}
+      <div class="bg-white border border-slate-200 rounded-2xl p-10 text-center text-slate-500">
+        <i data-lucide="frown" class="w-12 h-12 text-slate-300 mx-auto mb-3"></i>
+        <p class="font-medium">No hay eventos deportivos disponibles para apostar en este momento.</p>
+      </div>
+    {% endif %}
+  </div>
+
+  <!-- Columna del Boleto de Apuesta (1/3 de la pantalla) -->
+  <div class="md:col-span-1">
+    <div id="boleto" class="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm sticky top-6 space-y-4">
+      <h3 class="text-lg font-bold text-slate-900 border-b border-slate-100 pb-3 flex items-center gap-2">
+        <i data-lucide="ticket" class="w-5 h-5 text-indigo-600"></i>
+        <span>Boleto de Apuesta</span>
+      </h3>
+
+      <!-- Contenedor vacío por defecto -->
+      <div id="boleto-vacio" class="text-center py-8 text-slate-400">
+        <i data-lucide="mouse-pointer-click" class="w-8 h-8 mx-auto mb-2.5 text-slate-300"></i>
+        <p class="text-xs font-medium px-4">Selecciona alguna de las cuotas del catálogo para rellenar tu boleto de apuesta.</p>
+      </div>
+
+      <!-- Formulario de apuesta interactivo -->
+      <form id="form-apuesta" action="{% url 'apostar_html' %}" method="POST" class="hidden space-y-4">
+        {% csrf_token %}
+        <input type="hidden" id="input-seleccion-id" name="seleccion_id">
+
+        <!-- Detalle de la Selección -->
+        <div class="bg-slate-50 border border-slate-100 p-3.5 rounded-xl space-y-1 relative">
+          <button type="button" onclick="limpiarBoleto()" class="absolute top-2.5 right-2.5 text-slate-400 hover:text-slate-600 transition-colors">
+            <i data-lucide="x" class="w-4 h-4"></i>
+          </button>
+          <span id="boleto-evento" class="text-xs text-slate-500 font-bold block truncate max-w-[85%]">Evento</span>
+          <span id="boleto-seleccion" class="text-sm font-bold text-slate-800 block">Selección</span>
+          <div class="flex items-center justify-between pt-1 text-xs">
+            <span class="text-slate-400 font-medium">Cuota fijada</span>
+            <span id="boleto-cuota" class="font-bold text-indigo-600 text-sm">0.00</span>
+          </div>
+        </div>
+
+        <!-- Input de Monto -->
+        <div class="space-y-1.5">
+          <label for="input-monto" class="text-xs font-bold text-slate-500 uppercase tracking-wider block">Monto a apostar (fichas)</label>
+          <div class="relative rounded-xl shadow-sm">
+            <input 
+              type="number" 
+              step="0.5" 
+              min="0.5" 
+              max="5000"
+              id="input-monto" 
+              name="monto" 
+              required
+              oninput="calcularRetorno()"
+              placeholder="Min. 0.50"
+              class="w-full bg-slate-50 border border-slate-200 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 rounded-xl py-2 px-3 text-sm font-medium text-slate-800 outline-none transition-colors">
+          </div>
+        </div>
+
+        <!-- Retorno Estimado -->
+        <div class="flex items-center justify-between text-sm border-t border-slate-100 pt-3">
+          <span class="text-slate-500 font-medium">Ganancia Potencial</span>
+          <span id="retorno-potencial" class="font-extrabold text-slate-900">0.00 fichas</span>
+        </div>
+
+        <!-- Botón de Envío -->
+        <button 
+          type="submit" 
+          class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-2.5 rounded-xl shadow-sm hover:shadow transition-all text-sm flex items-center justify-center gap-1.5">
+          <i data-lucide="play" class="w-4 h-4"></i>
+          <span>Confirmar Apuesta</span>
+        </button>
+      </form>
+    </div>
+
+    <!-- Sección de Mis Apuestas (Pestañas Interactivas) -->
+    <div class="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm space-y-4 mt-6">
+      <h3 class="text-lg font-bold text-slate-900 border-b border-slate-100 pb-3 flex items-center gap-2">
+        <i data-lucide="bookmark-check" class="w-5 h-5 text-indigo-600"></i>
+        <span>Mis Apuestas</span>
+      </h3>
+
+      <!-- Selectores de Pestañas -->
+      <div class="flex border-b border-slate-100">
+        <button 
+          type="button" 
+          onclick="cambiarPestana('abiertas')" 
+          id="btn-tab-abiertas"
+          class="flex-1 pb-2.5 text-xs font-bold uppercase tracking-wider text-indigo-600 border-b-2 border-indigo-600 outline-none text-center">
+          Abiertas ({{ apuestas_abiertas|length }})
+        </button>
+        <button 
+          type="button" 
+          onclick="cambiarPestana('resueltas')" 
+          id="btn-tab-resueltas"
+          class="flex-1 pb-2.5 text-xs font-bold uppercase tracking-wider text-slate-400 border-b-2 border-transparent hover:text-slate-600 outline-none text-center">
+          Resueltas ({{ apuestas_resueltas|length }})
+        </button>
+      </div>
+
+      <!-- Contenido Pestaña Abiertas -->
+      <div id="tab-content-abiertas" class="space-y-3">
+        {% if apuestas_abiertas %}
+          {% for apuesta in apuestas_abiertas %}
+            <div class="bg-slate-50 border border-slate-100 p-3.5 rounded-xl space-y-1 text-xs">
+              <div class="flex justify-between items-center mb-1">
+                <span class="text-[10px] font-bold text-slate-400 uppercase">{{ apuesta.seleccion.mercado.evento.local }} vs {{ apuesta.seleccion.mercado.evento.visitante }}</span>
+                <span class="bg-indigo-50 text-indigo-700 font-extrabold px-2 py-0.5 rounded-full text-[9px] uppercase">Abierta</span>
+              </div>
+              <div class="flex justify-between text-slate-800 font-medium">
+                <span>Tu Selección: <strong>{{ apuesta.seleccion.nombre }}</strong></span>
+                <span class="font-bold text-slate-900">@{{ apuesta.cuota_fijada }}</span>
+              </div>
+              <div class="flex justify-between text-slate-500 pt-1 border-t border-slate-100/50 mt-1">
+                <span>Apostado: {{ apuesta.monto }} f.</span>
+                <span class="font-bold text-slate-700">Ganancia: {% widthratio apuesta.monto 1 apuesta.cuota_fijada %} f.</span>
+              </div>
+            </div>
+          {% endfor %}
+        {% else %}
+          <div class="text-center py-6 text-slate-400 text-xs font-medium">
+            No tienes apuestas abiertas en este momento.
+          </div>
+        {% endif %}
+      </div>
+
+      <!-- Contenido Pestaña Resueltas -->
+      <div id="tab-content-resueltas" class="hidden space-y-3">
+        {% if apuestas_resueltas %}
+          {% for apuesta in apuestas_resueltas %}
+            <div class="border p-3.5 rounded-xl space-y-1 text-xs transition-colors
+              {% if apuesta.estado == 'won' %}
+                bg-emerald-50/50 border-emerald-100
+              {% elif apuesta.estado == 'lost' %}
+                bg-rose-50/30 border-rose-100/50
+              {% else %}
+                bg-slate-50 border-slate-100
+              {% endif %}">
+              <div class="flex justify-between items-center mb-1">
+                <span class="text-[10px] font-bold text-slate-400 uppercase truncate max-w-[70%]">{{ apuesta.seleccion.mercado.evento.local }} vs {{ apuesta.seleccion.mercado.evento.visitante }}</span>
+                <span class="font-extrabold px-2 py-0.5 rounded-full text-[9px] uppercase
+                  {% if apuesta.estado == 'won' %}
+                    bg-emerald-100 text-emerald-800
+                  {% elif apuesta.estado == 'lost' %}
+                    bg-rose-100 text-rose-800
+                  {% else %}
+                    bg-slate-100 text-slate-700
+                  {% endif %}">
+                  {{ apuesta.get_estado_display }}
+                </span>
+              </div>
+              <div class="flex justify-between text-slate-800 font-medium">
+                <span>Tu Selección: <strong>{{ apuesta.seleccion.nombre }}</strong></span>
+                <span class="font-bold text-slate-900">@{{ apuesta.cuota_fijada }}</span>
+              </div>
+              <div class="flex justify-between pt-1 border-t border-slate-100/50 mt-1
+                {% if apuesta.estado == 'won' %}
+                  text-emerald-800
+                {% elif apuesta.estado == 'lost' %}
+                  text-rose-800
+                {% else %}
+                  text-slate-500
+                {% endif %}">
+                <span>Monto: {{ apuesta.monto }} f.</span>
+                <span class="font-bold">
+                  {% if apuesta.estado == 'won' %}
+                    Cobraste: {% widthratio apuesta.monto 1 apuesta.cuota_fijada %} f.
+                  {% elif apuesta.estado == 'lost' %}
+                    Perdiste: -{{ apuesta.monto }} f.
+                  {% else %}
+                    Devuelto: {{ apuesta.monto }} f.
+                  {% endif %}
+                </span>
+              </div>
+            </div>
+          {% endfor %}
+        {% else %}
+          <div class="text-center py-6 text-slate-400 text-xs font-medium">
+            No tienes apuestas resueltas aún.
+          </div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  function cambiarPestana(tipo) {
+    const tabAbiertas = document.getElementById("tab-content-abiertas");
+    const tabResueltas = document.getElementById("tab-content-resueltas");
+    const btnAbiertas = document.getElementById("btn-tab-abiertas");
+    const btnResueltas = document.getElementById("btn-tab-resueltas");
+
+    if (tipo === "abiertas") {
+      tabAbiertas.classList.remove("hidden");
+      tabResueltas.classList.add("hidden");
+      
+      btnAbiertas.className = "flex-1 pb-2.5 text-xs font-bold uppercase tracking-wider text-indigo-600 border-b-2 border-indigo-600 outline-none text-center";
+      btnResueltas.className = "flex-1 pb-2.5 text-xs font-bold uppercase tracking-wider text-slate-400 border-b-2 border-transparent hover:text-slate-600 outline-none text-center";
+    } else {
+      tabAbiertas.classList.add("hidden");
+      tabResueltas.classList.remove("hidden");
+
+      btnAbiertas.className = "flex-1 pb-2.5 text-xs font-bold uppercase tracking-wider text-slate-400 border-b-2 border-transparent hover:text-slate-600 outline-none text-center";
+      btnResueltas.className = "flex-1 pb-2.5 text-xs font-bold uppercase tracking-wider text-indigo-600 border-b-2 border-indigo-600 outline-none text-center";
+    }
+  }
+
+  function seleccionarCuota(seleccionId, nombre, cuota, evento) {
+    document.getElementById("input-seleccion-id").value = seleccionId;
+    document.getElementById("boleto-evento").innerText = evento;
+    document.getElementById("boleto-seleccion").innerText = nombre;
+    document.getElementById("boleto-cuota").innerText = cuota;
+    
+    // Cambiar visualización
+    document.getElementById("boleto-vacio").classList.add("hidden");
+    const form = document.getElementById("form-apuesta");
+    form.classList.remove("hidden");
+    
+    // Enfocar input de monto
+    const inputMonto = document.getElementById("input-monto");
+    inputMonto.value = "";
+    document.getElementById("retorno-potencial").innerText = "0.00 fichas";
+    inputMonto.focus();
+  }
+
+  function calcularRetorno() {
+    const monto = parseFloat(document.getElementById("input-monto").value) || 0;
+    const cuota = parseFloat(document.getElementById("boleto-cuota").innerText) || 0;
+    const retorno = (monto * cuota).toFixed(2);
+    document.getElementById("retorno-potencial").innerText = `${retorno} fichas`;
+  }
+
+  function limpiarBoleto() {
+    document.getElementById("input-seleccion-id").value = "";
+    document.getElementById("form-apuesta").classList.add("hidden");
+    document.getElementById("boleto-vacio").classList.remove("hidden");
+  }
+</script>
+{% endblock %}

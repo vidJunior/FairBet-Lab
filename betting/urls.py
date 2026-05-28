@@ -1,0 +1,7 @@
+from django.urls import path
+from betting import views
+
+urlpatterns = [
+    path("", views.catalogo_html, name="catalogo_html"),
+    path("apostar/", views.apostar_html, name="apostar_html"),
+]

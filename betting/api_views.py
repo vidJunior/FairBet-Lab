@@ -4,7 +4,8 @@ from rest_framework import status, permissions, generics
 from django.core.cache import cache
 from django.core.exceptions import ValidationError
 
-from betting.models import Evento, EstadoEvento
+from config.choices import EstadoEvento
+from betting.models import Evento
 from betting.serializers import EventoSerializer, ApuestaCreateSerializer, ApuestaSerializer
 from betting.services import crear_apuesta
 

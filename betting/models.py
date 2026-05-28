@@ -5,20 +5,7 @@ from django.core.validators import MinValueValidator
 from django.utils import timezone
 from decimal import Decimal
 
-
-class EstadoEvento(models.TextChoices):
-    PROGRAMADO = "programado", "Programado"
-    EN_VIVO = "en_vivo", "En Vivo"
-    FINALIZADO = "finalizado", "Finalizado"
-    SUSPENDIDO = "suspendido", "Suspendido"
-    ANULADO = "anulado", "Anulado"
-
-
-class EstadoApuesta(models.TextChoices):
-    ACCEPTED = "accepted", "Aceptada"
-    WON = "won", "Ganada"
-    LOST = "lost", "Perdida"
-    CANCELLED = "cancelled", "Cancelada"
+from config.choices import EstadoEvento, EstadoApuesta
 
 
 class Evento(models.Model):

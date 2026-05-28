@@ -5,11 +5,11 @@ from django.test import TestCase
 from django.utils import timezone
 from django.db import models
 
-from config.choices import TipoCuenta, EstadoPerfil, TipoAutoexclusion, Direccion
+from config.choices import TipoCuenta, EstadoPerfil, TipoAutoexclusion, Direccion, EstadoEvento, EstadoApuesta
 from accounts.models import PerfilUsuario
 from wallet.models import LedgerEntry
 from wallet.services import recargar
-from betting.models import Evento, Mercado, Seleccion, Apuesta, EstadoEvento, EstadoApuesta
+from betting.models import Evento, Mercado, Seleccion, Apuesta
 from betting.services import crear_apuesta, liquidar_apuestas_evento
 
 

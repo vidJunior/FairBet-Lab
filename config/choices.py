@@ -32,3 +32,19 @@ class TipoCuenta(models.TextChoices):
 class Direccion(models.TextChoices):
     DEBIT = "DEBIT", "Débito"
     CREDIT = "CREDIT", "Crédito"
+
+
+class EstadoEvento(models.TextChoices):
+    PROGRAMADO = "programado", "Programado"
+    EN_VIVO = "en_vivo", "En Vivo"
+    FINALIZADO = "finalizado", "Finalizado"
+    SUSPENDIDO = "suspendido", "Suspendido"
+    ANULADO = "anulado", "Anulado"
+
+
+class EstadoApuesta(models.TextChoices):
+    ACCEPTED = "accepted", "Aceptada"
+    WON = "won", "Ganada"
+    LOST = "lost", "Perdida"
+    CANCELLED = "cancelled", "Cancelada"
+

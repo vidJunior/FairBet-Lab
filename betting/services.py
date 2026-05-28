@@ -4,10 +4,10 @@ from django.core.exceptions import ValidationError
 from django.db import transaction
 from django.utils import timezone
 
-from config.choices import TipoCuenta, EstadoPerfil
+from config.choices import TipoCuenta, EstadoPerfil, EstadoEvento, EstadoApuesta
 from wallet.models import LedgerEntry
 from wallet.services import transferencia_interna, registrar_movimiento
-from betting.models import Evento, Seleccion, Apuesta, EstadoEvento, EstadoApuesta
+from betting.models import Evento, Seleccion, Apuesta
 
 
 @transaction.atomic

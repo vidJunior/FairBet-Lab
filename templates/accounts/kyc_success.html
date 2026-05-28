@@ -1,0 +1,115 @@
+{% extends 'base.html' %} {% block title %}Verificación KYC Aprobada - FairBet Lab{% endblock %}
+{% block content %}
+<div
+  class="w-full max-w-2xl bg-white border border-slate-200 rounded-xl p-8 shadow-sm"
+>
+  <!-- mensajes de django -->
+  {% if messages %}
+  <div class="mb-6 space-y-2">
+    {% for message in messages %}
+    <div
+      class="p-3.5 rounded-lg text-sm flex items-start gap-3 bg-emerald-50 border border-emerald-200 text-emerald-800"
+    >
+      <i
+        data-lucide="check-circle"
+        class="w-4 h-4 text-emerald-600 shrink-0 mt-0.5 animate-pulse"
+      ></i>
+      <span>{{ message }}</span>
+    </div>
+    {% endfor %}
+  </div>
+  {% endif %}
+
+  <div class="flex items-center gap-4 border-b border-slate-200 pb-6 mb-6">
+    <div
+      class="p-3 bg-emerald-50 border border-emerald-200 rounded-lg text-emerald-700"
+    >
+      <i data-lucide="check-check" class="w-6 h-6"></i>
+    </div>
+    <div>
+      <h1 class="text-xl font-bold text-slate-900">
+        Verificación KYC Aprobada
+      </h1>
+      <p class="text-slate-500 text-sm">
+        Tu cuenta ha sido validada según los requerimientos.
+      </p>
+    </div>
+  </div>
+
+  <!-- Información del usuario -->
+  <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+    <div class="space-y-4">
+      <div>
+        <span
+          class="block text-xs font-bold text-slate-400 uppercase tracking-wide"
+          >Nombre Completo</span
+        >
+        <span class="text-sm font-medium text-slate-800"
+          >{{ user.first_name }} {{ user.last_name }}</span
+        >
+      </div>
+      <div>
+        <span
+          class="block text-xs font-bold text-slate-400 uppercase tracking-wide"
+          >Usuario</span
+        >
+        <span class="text-sm font-medium text-slate-800"
+          >{{ user.username }}</span
+        >
+      </div>
+      <div>
+        <span
+          class="block text-xs font-bold text-slate-400 uppercase tracking-wide"
+          >Correo Electrónico</span
+        >
+        <span class="text-sm font-medium text-slate-800">{{ user.email }}</span>
+      </div>
+    </div>
+
+    <div class="space-y-4">
+      <div>
+        <span
+          class="block text-xs font-bold text-slate-400 uppercase tracking-wide"
+          >DNI (Documento Nacional de Identidad)</span
+        >
+        <span class="text-sm font-medium text-slate-800"
+          >{{ user.perfil.dni }}</span
+        >
+      </div>
+      <div>
+        <span
+          class="block text-xs font-bold text-slate-400 uppercase tracking-wide"
+          >Fecha de Nacimiento</span
+        >
+        <span class="text-sm font-medium text-slate-800"
+          >{{ user.perfil.fecha_nacimiento|date:"d/m/Y" }}</span
+        >
+      </div>
+      <div>
+        <span
+          class="block text-xs font-bold text-slate-400 uppercase tracking-wide"
+          >Estado de Cuenta</span
+        >
+        <span
+          class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold uppercase tracking-wider bg-emerald-50 text-emerald-800 border border-emerald-200"
+        >
+          {{ user.perfil.get_estado_display }}
+        </span>
+      </div>
+    </div>
+  </div>
+
+  <!-- tarjeta de nota -->
+  <div
+    class="mt-8 p-4 bg-slate-50 border border-slate-200 rounded-lg text-center"
+  >
+    <i data-lucide="info" class="w-4 h-4 text-slate-600 inline-block mb-1"></i>
+    <h3 class="text-xs font-semibold text-slate-900 mb-0.5">
+      Información Académica
+    </h3>
+    <p class="text-slate-500 text-xs max-w-md mx-auto leading-relaxed">
+      Registro de KYC verificado con éxito.
+    </p>
+  </div>
+</div>
+{% endblock %}

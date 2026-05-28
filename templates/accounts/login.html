@@ -1,0 +1,92 @@
+{% extends 'base.html' %}
+{% block title %}Iniciar Sesión - FairBet Lab{%endblock %}
+{% block header_actions %}
+
+<a
+  href="{% url 'register_html' %}"
+  class="text-sm font-medium text-slate-600 hover:text-slate-900 transition-colors"
+>
+  Registrarse
+</a>
+{% endblock %} {% block content %}
+<div
+  class="w-full max-w-md bg-white border border-slate-200 rounded-xl p-8 shadow-sm"
+>
+  <div class="mb-8">
+    <h1 class="text-2xl font-bold tracking-tight text-slate-900 mb-1">
+      Iniciar Sesión
+    </h1>
+    <p class="text-slate-500 text-sm">
+      Ingresa tus datos para acceder a tu cuenta.
+    </p>
+  </div>
+
+  <!-- mensajes de django -->
+  {% if messages %}
+  <div class="mb-6 space-y-2">
+    {% for message in messages %}
+    <div
+      class="p-3.5 rounded-lg text-sm flex items-start gap-3 {% if message.tags == 'success' %}bg-emerald-50 border border-emerald-200 text-emerald-800{% else %}bg-red-50 border border-red-200 text-red-800{% endif %}"
+    >
+      <i
+        data-lucide="{% if message.tags == 'success' %}check-circle{% else %}alert-triangle{% endif %}"
+        class="w-4 h-4 {% if message.tags == 'success' %}text-emerald-600{% else %}text-red-600{% endif %} shrink-0 mt-0.5 animate-pulse"
+      ></i>
+      <div>
+        <span class="font-bold block text-slate-900 mb-0.5">
+          {% if message.tags == 'success' %}Completado{% else %}Error de
+          Acceso{% endif %}
+        </span>
+        <span>{{ message }}</span>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+  {% endif %}
+
+  <!-- Form django -->
+  <form
+    id="login-form"
+    method="POST"
+    action="{% url 'login_html' %}"
+    class="space-y-5"
+  >
+    {% csrf_token %}
+
+    <div>
+      <label
+        for="{{ form.username.id_for_label }}"
+        class="block text-xs font-semibold text-slate-600 mb-1.5"
+        >{{ form.username.label }}</label
+      >
+      {{ form.username }} {% if form.username.errors %}
+      <p class="text-red-600 text-xs mt-1">
+        {{ form.username.errors|join:", " }}
+      </p>
+      {% endif %}
+    </div>
+
+    <div>
+      <label
+        for="{{ form.password.id_for_label }}"
+        class="block text-xs font-semibold text-slate-600 mb-1.5"
+        >{{ form.password.label }}</label
+      >
+      {{ form.password }} {% if form.password.errors %}
+      <p class="text-red-600 text-xs mt-1">
+        {{ form.password.errors|join:", " }}
+      </p>
+      {% endif %}
+    </div>
+
+    <button
+      type="submit"
+      id="btn-submit"
+      class="w-full bg-slate-900 hover:bg-slate-800 text-white font-medium py-2.5 rounded-lg transition-colors text-sm flex items-center justify-center gap-2 cursor-pointer mt-6"
+    >
+      <span>Ingresar</span>
+      <i data-lucide="log-in" class="w-4 h-4"></i>
+    </button>
+  </form>
+</div>
+{% endblock %}

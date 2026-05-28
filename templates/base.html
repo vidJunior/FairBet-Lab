@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>{% block title %}FairBet Lab{% endblock %}</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts -->
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      body {
+        font-family: "Inter", sans-serif;
+      }
+    </style>
+    {% block extra_head %}{% endblock %}
+  </head>
+  <body
+    class="min-h-screen bg-slate-50 text-slate-900 flex flex-col justify-between"
+  >
+    <!-- Header -->
+    <header
+      class="w-full max-w-4xl mx-auto px-6 py-5 flex items-center justify-between border-b border-slate-200"
+    >
+      <a
+        href="/"
+        class="text-xl font-bold tracking-tight text-slate-900 flex items-center gap-2"
+      >
+        <i data-lucide="shield" class="w-5 h-5 text-slate-700"></i>
+        <span>FairBet Lab</span>
+      </a>
+      {% block header_actions %} {% if user.is_authenticated %}
+      <div class="flex items-center gap-4">
+        <span class="text-sm text-slate-600"
+          >Usuario:
+          <span class="text-slate-900 font-semibold"
+            >{{ user.username }}</span
+          ></span
+        >
+        <a
+          href="{% url 'logout_html' %}"
+          class="bg-white border border-slate-200 hover:bg-slate-50 px-3 py-1.5 rounded-lg text-sm font-medium text-red-600 transition-colors flex items-center gap-1.5 shadow-sm"
+        >
+          <i data-lucide="log-out" class="w-4 h-4"></i>Salir
+        </a>
+      </div>
+      {% endif %} {% endblock %}
+    </header>
+
+    <!-- Main Container -->
+    <main class="flex-grow flex items-center justify-center px-4 py-12">
+      {% block content %}{% endblock %}
+    </main>
+
+    <!-- Footer -->
+    {% include 'partials/footer.html' %}
+
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script>
+      lucide.createIcons();
+    </script>
+
+    <!-- Extra JS -->
+    {% block extra_js %}{% endblock %}
+  </body>
+</html>

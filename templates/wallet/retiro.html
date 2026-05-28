@@ -1,0 +1,87 @@
+{% extends 'base.html' %}
+
+{% block title %}Retirar - FairBet Lab{% endblock %}
+
+{% block header_actions %}
+{% if user.is_authenticated %}
+<div class="flex items-center gap-4">
+  <span class="text-sm text-slate-600">
+    Usuario:
+    <span class="text-slate-900 font-semibold">{{ user.username }}</span>
+  </span>
+  <a
+    href="{% url 'wallet_home_html' %}"
+    class="bg-white border border-slate-200 hover:bg-slate-50 px-3 py-1.5 rounded-lg text-sm font-medium text-slate-700 transition-colors flex items-center gap-1.5 shadow-sm"
+  >
+    <i data-lucide="arrow-left" class="w-4 h-4"></i>Volver
+  </a>
+  <a
+    href="{% url 'logout_html' %}"
+    class="bg-white border border-slate-200 hover:bg-slate-50 px-3 py-1.5 rounded-lg text-sm font-medium text-red-600 transition-colors flex items-center gap-1.5 shadow-sm"
+  >
+    <i data-lucide="log-out" class="w-4 h-4"></i>Salir
+  </a>
+</div>
+{% endif %}
+{% endblock %}
+
+{% block content %}
+<div class="w-full max-w-md bg-white border border-slate-200 rounded-xl p-8 shadow-sm">
+  <div class="mb-6 flex justify-center">
+    <div class="p-3 bg-slate-50 border border-slate-200 rounded-full text-slate-700">
+      <i data-lucide="minus-circle" class="w-8 h-8"></i>
+    </div>
+  </div>
+
+  <h1 class="text-2xl font-bold tracking-tight text-slate-900 mb-2 text-center">
+    Retirar Fichas
+  </h1>
+  <p class="text-slate-500 text-sm mb-6 text-center">
+    Retira fichas virtuales de tu billetera
+  </p>
+
+  {% if messages %}
+  <div class="mb-4 space-y-2">
+    {% for message in messages %}
+    <div
+      class="px-4 py-3 rounded-lg text-sm {% if message.tags == 'error' %}bg-red-50 text-red-700 border border-red-200{% else %}bg-green-50 text-green-700 border border-green-200{% endif %}"
+    >
+      {{ message }}
+    </div>
+    {% endfor %}
+  </div>
+  {% endif %}
+
+  <form method="post" novalidate>
+    {% csrf_token %}
+    <div class="mb-6">
+      <label
+        for="{{ form.monto.id_for_label }}"
+        class="block text-sm font-medium text-slate-700 mb-1.5"
+      >
+        {{ form.monto.label }}
+      </label>
+      {{ form.monto }}
+      {% if form.monto.errors %}
+      <p class="mt-1.5 text-xs text-red-600">
+        {{ form.monto.errors.0 }}
+      </p>
+      {% endif %}
+    </div>
+
+    <button
+      type="submit"
+      class="w-full inline-flex items-center justify-center bg-slate-900 hover:bg-slate-800 text-white font-medium px-4 py-2.5 rounded-lg text-sm transition-colors gap-1.5"
+    >
+      <i data-lucide="check-circle" class="w-4 h-4"></i>
+      Confirmar Retiro
+    </button>
+  </form>
+
+  <div class="mt-6 pt-4 border-t border-slate-200">
+    <p class="text-xs text-slate-500 text-center">
+      Las fichas virtuales no tienen valor real. Este es un entorno educativo.
+    </p>
+  </div>
+</div>
+{% endblock %}

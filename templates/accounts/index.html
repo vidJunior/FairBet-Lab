@@ -1,4 +1,30 @@
-{% extends 'base.html' %} {% block title %}Dashboard - FairBet Lab{% endblock %}
+{% extends 'base.html' %}
+
+{% block title %}Dashboard - FairBet Lab{% endblock %}
+
+{% block header_actions %}
+{% if user.is_authenticated %}
+<div class="flex items-center gap-4">
+  <span class="text-sm text-slate-600">
+    Usuario:
+    <span class="text-slate-900 font-semibold">{{ user.username }}</span>
+  </span>
+  <a
+    href="{% url 'wallet_home_html' %}"
+    class="bg-white border border-slate-200 hover:bg-slate-50 px-3 py-1.5 rounded-lg text-sm font-medium text-slate-700 transition-colors flex items-center gap-1.5 shadow-sm"
+  >
+    <i data-lucide="wallet" class="w-4 h-4"></i>Billetera
+  </a>
+  <a
+    href="{% url 'logout_html' %}"
+    class="bg-white border border-slate-200 hover:bg-slate-50 px-3 py-1.5 rounded-lg text-sm font-medium text-red-600 transition-colors flex items-center gap-1.5 shadow-sm"
+  >
+    <i data-lucide="log-out" class="w-4 h-4"></i>Salir
+  </a>
+</div>
+{% endif %}
+{% endblock %}
+
 {% block content %}
 <div
   class="w-full max-w-md bg-white border border-slate-200 rounded-xl p-8 shadow-sm text-center"
@@ -14,12 +40,22 @@
   <p class="text-slate-500 text-sm mb-6">
     Hola <span class="font-semibold text-slate-800">{{ user.username }}</span>. Ya estás autenticado en la plataforma.
   </p>
-  <a
-    href="{% url 'kyc_success_html' %}"
-    class="inline-flex items-center justify-center bg-slate-900 hover:bg-slate-800 text-white font-medium px-4 py-2.5 rounded-lg text-sm transition-colors gap-1.5 w-full"
-  >
-    <span>Ver mi Verificación KYC</span>
-    <i data-lucide="arrow-right" class="w-4 h-4"></i>
-  </a>
+  <div class="space-y-3">
+    <a
+      href="{% url 'wallet_home_html' %}"
+      class="inline-flex items-center justify-center bg-slate-900 hover:bg-slate-800 text-white font-medium px-4 py-2.5 rounded-lg text-sm transition-colors gap-1.5 w-full"
+    >
+      <i data-lucide="wallet" class="w-4 h-4"></i>
+      <span>Ir a mi Billetera</span>
+      <i data-lucide="arrow-right" class="w-4 h-4"></i>
+    </a>
+    <a
+      href="{% url 'kyc_success_html' %}"
+      class="inline-flex items-center justify-center bg-white border border-slate-300 hover:bg-slate-50 text-slate-700 font-medium px-4 py-2.5 rounded-lg text-sm transition-colors gap-1.5 w-full"
+    >
+      <span>Ver mi Verificacion KYC</span>
+      <i data-lucide="arrow-right" class="w-4 h-4"></i>
+    </a>
+  </div>
 </div>
 {% endblock %}

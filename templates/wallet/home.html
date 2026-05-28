@@ -1,0 +1,79 @@
+{% extends 'base.html' %}
+
+{% block title %}Billetera - FairBet Lab{% endblock %}
+
+{% block header_actions %}
+{% if user.is_authenticated %}
+<div class="flex items-center gap-4">
+  <span class="text-sm text-slate-600">
+    Usuario:
+    <span class="text-slate-900 font-semibold">{{ user.username }}</span>
+  </span>
+  <a
+    href="{% url 'wallet_home_html' %}"
+    class="bg-white border border-slate-200 hover:bg-slate-50 px-3 py-1.5 rounded-lg text-sm font-medium text-slate-700 transition-colors flex items-center gap-1.5 shadow-sm"
+  >
+    <i data-lucide="wallet" class="w-4 h-4"></i>Billetera
+  </a>
+  <a
+    href="{% url 'logout_html' %}"
+    class="bg-white border border-slate-200 hover:bg-slate-50 px-3 py-1.5 rounded-lg text-sm font-medium text-red-600 transition-colors flex items-center gap-1.5 shadow-sm"
+  >
+    <i data-lucide="log-out" class="w-4 h-4"></i>Salir
+  </a>
+</div>
+{% endif %}
+{% endblock %}
+
+{% block content %}
+<div class="w-full max-w-md space-y-6">
+  <!-- Saldo Card -->
+  <div class="bg-white border border-slate-200 rounded-xl p-8 shadow-sm text-center">
+    <div class="mb-4 flex justify-center">
+      <div class="p-3 bg-slate-50 border border-slate-200 rounded-full text-slate-700">
+        <i data-lucide="wallet" class="w-8 h-8"></i>
+      </div>
+    </div>
+    <h1 class="text-2xl font-bold tracking-tight text-slate-900 mb-2">
+      Tu Billetera
+    </h1>
+    <p class="text-slate-500 text-sm mb-4">
+      Saldo disponible en fichas virtuales
+    </p>
+    <div class="text-4xl font-bold text-slate-900 mb-6">
+      {{ saldo_disponible }}
+    </div>
+    <div class="flex gap-3">
+      <a
+        href="{% url 'wallet_deposito_html' %}"
+        class="flex-1 inline-flex items-center justify-center bg-slate-900 hover:bg-slate-800 text-white font-medium px-4 py-2.5 rounded-lg text-sm transition-colors gap-1.5"
+      >
+        <i data-lucide="plus-circle" class="w-4 h-4"></i>Depositar
+      </a>
+      <a
+        href="{% url 'wallet_retiro_html' %}"
+        class="flex-1 inline-flex items-center justify-center bg-white border border-slate-300 hover:bg-slate-50 text-slate-700 font-medium px-4 py-2.5 rounded-lg text-sm transition-colors gap-1.5"
+      >
+        <i data-lucide="minus-circle" class="w-4 h-4"></i>Retirar
+      </a>
+    </div>
+  </div>
+
+  <!-- Acciones rapidas -->
+  <div class="bg-white border border-slate-200 rounded-xl p-6 shadow-sm">
+    <h2 class="text-lg font-semibold text-slate-900 mb-4">Acciones</h2>
+    <div class="space-y-3">
+      <a
+        href="{% url 'wallet_saldo_html' %}"
+        class="flex items-center gap-3 p-3 rounded-lg hover:bg-slate-50 transition-colors border border-slate-100"
+      >
+        <i data-lucide="bar-chart-3" class="w-5 h-5 text-slate-500"></i>
+        <div>
+          <p class="text-sm font-medium text-slate-900">Ver desglose de saldos</p>
+          <p class="text-xs text-slate-500">Wallet, apuestas pendientes, bonos</p>
+        </div>
+      </a>
+    </div>
+  </div>
+</div>
+{% endblock %}

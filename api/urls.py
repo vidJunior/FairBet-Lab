@@ -12,6 +12,10 @@ from wallet.api_views import (
     RecargaAPIView,
     RetiroAPIView,
 )
+from betting.api_views import (
+    CatalogoEventosAPIView,
+    CrearApuestaAPIView,
+)
 
 urlpatterns = [
     # OpenAPI Schema
@@ -25,4 +29,7 @@ urlpatterns = [
     path("wallet/saldo/", SaldoAPIView.as_view(), name="api_wallet_saldo"),
     path("wallet/recargar/", RecargaAPIView.as_view(), name="api_wallet_recargar"),
     path("wallet/retirar/", RetiroAPIView.as_view(), name="api_wallet_retirar"),
+    # Endpoints de Apuestas
+    path("betting/catalogo/", CatalogoEventosAPIView.as_view(), name="api_betting_catalogo"),
+    path("betting/apostar/", CrearApuestaAPIView.as_view(), name="api_betting_apostar"),
 ]

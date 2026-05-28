@@ -3,8 +3,7 @@ version: "3.9"
 services:
   web:
     build: .
-    # Comando por defecto sin usar daphne
-    command: python manage.py runserver 0.0.0.0:8000
+    command: daphne -b 0.0.0.0 -p 8000 config.asgi:application
     volumes:
       - .:/app
     ports:
@@ -13,6 +12,25 @@ services:
       - .env
     depends_on:
       - db
+      - redis
+
+  redis:
+    image: redis:7-alpine
+    container_name: fairbet_redis
+    ports:
+      - "6379:6379"
+
+  celery:
+    build: .
+    command: celery -A config worker --loglevel=info
+    volumes:
+      - .:/app
+    env_file:
+      - .env
+    depends_on:
+      - db
+      - redis
+
 
   db:
     image: postgres:15-alpine

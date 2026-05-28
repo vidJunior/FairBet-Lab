@@ -48,3 +48,9 @@ class EstadoApuesta(models.TextChoices):
     LOST = "lost", "Perdida"
     CANCELLED = "cancelled", "Cancelada"
 
+
+class TipoApuesta(models.TextChoices):
+    SIMPLE = "SIMPLE", "Simple"
+    COMBINADA = "COMBINADA", "Combinada"
+
+

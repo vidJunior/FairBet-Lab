@@ -1,0 +1,149 @@
+{% extends 'base.html' %}
+{% block title %}Juego Responsable — FairBet Lab{% endblock %}
+
+{% block content %}
+<div class="w-full max-w-2xl space-y-6">
+
+  <!-- Mensajes Django -->
+  {% if messages %}
+  <div class="space-y-2">
+    {% for message in messages %}
+    <div class="p-3.5 rounded-lg text-sm flex items-start gap-3
+      {% if message.tags == 'error' %}bg-red-50 border border-red-200 text-red-800
+      {% else %}bg-emerald-50 border border-emerald-200 text-emerald-800{% endif %}">
+      <i data-lucide="{% if message.tags == 'error' %}alert-circle{% else %}check-circle{% endif %}"
+         class="w-4 h-4 shrink-0 mt-0.5"></i>
+      <span>{{ message }}</span>
+    </div>
+    {% endfor %}
+  </div>
+  {% endif %}
+
+  <!-- Límite Pendiente (Aumento con Cooldown) -->
+  {% if perfil.limite_pendiente %}
+  <div class="p-4 bg-amber-50 border border-amber-200 rounded-xl flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+    <div class="space-y-1">
+      <h4 class="text-sm font-bold text-amber-800 flex items-center gap-1.5">
+        <i data-lucide="clock" class="w-4 h-4"></i>
+        Solicitud de aumento pendiente
+      </h4>
+      <p class="text-xs text-amber-700">
+        Aumento del límite <strong>{{ perfil.tipo_limite_pendiente }}</strong> a <strong>{{ perfil.limite_pendiente|stringformat:".2f" }} fichas</strong>.
+      </p>
+      {% if cooldown_restante %}
+      <p class="text-xs text-amber-600">Tiempo de espera restante: <strong>{{ cooldown_restante }}</strong></p>
+      {% else %}
+      <p class="text-xs text-emerald-700 font-semibold">¡El tiempo de cooldown ya ha terminado! Ya puedes aplicar este límite.</p>
+      {% endif %}
+    </div>
+    {% if not cooldown_restante %}
+    <form method="post" action="{% url 'juego_responsable_html' %}">
+      {% csrf_token %}
+      <input type="hidden" name="action" value="aplicar_pendiente">
+      <button type="submit" class="bg-amber-600 hover:bg-amber-700 text-white font-medium text-xs px-3.5 py-2 rounded-lg transition-colors flex items-center gap-1.5 shadow-sm">
+        Aplicar Límite
+      </button>
+    </form>
+    {% endif %}
+  </div>
+  {% endif %}
+
+  <!-- Encabezado -->
+  <div class="flex items-center gap-4 bg-white border border-slate-200 rounded-xl p-6 shadow-sm">
+    <div class="p-3 bg-slate-50 border border-slate-200 rounded-lg text-slate-700">
+      <i data-lucide="shield" class="w-6 h-6 text-indigo-600"></i>
+    </div>
+    <div>
+      <h1 class="text-xl font-bold text-slate-900">Juego Responsable</h1>
+      <p class="text-slate-500 text-sm">Gestiona tus límites de depósito y opciones de autoexclusión.</p>
+    </div>
+  </div>
+
+  <!-- Configuración de Límites -->
+  <div class="bg-white border border-slate-200 rounded-xl p-6 shadow-sm space-y-6">
+    <div class="flex items-center gap-2 border-b border-slate-100 pb-3">
+      <i data-lucide="sliders" class="w-5 h-5 text-indigo-600"></i>
+      <h2 class="text-base font-bold text-slate-800">Límites de Depósito</h2>
+    </div>
+
+    <!-- Límites Activos -->
+    <div class="bg-slate-50 border border-slate-150 rounded-xl p-4 grid grid-cols-3 gap-4 text-center">
+      <div>
+        <span class="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">Diario</span>
+        <span class="text-sm font-semibold text-slate-800">{{ perfil.limite_deposito_diario|stringformat:".2f" }} fichas</span>
+      </div>
+      <div>
+        <span class="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">Semanal</span>
+        <span class="text-sm font-semibold text-slate-800">{{ perfil.limite_deposito_semanal|stringformat:".2f" }} fichas</span>
+      </div>
+      <div>
+        <span class="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">Mensual</span>
+        <span class="text-sm font-semibold text-slate-800">{{ perfil.limite_deposito_mensual|stringformat:".2f" }} fichas</span>
+      </div>
+    </div>
+
+    <!-- Formulario para Modificar Límites -->
+    <form method="post" action="{% url 'juego_responsable_html' %}" class="space-y-4">
+      {% csrf_token %}
+      <input type="hidden" name="action" value="actualizar_limites">
+
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div>
+          <label class="block text-xs font-semibold text-slate-600 mb-1.5">Límite Diario</label>
+          {{ limites_form.limite_deposito_diario }}
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-slate-600 mb-1.5">Límite Semanal</label>
+          {{ limites_form.limite_deposito_semanal }}
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-slate-600 mb-1.5">Límite Mensual</label>
+          {{ limites_form.limite_deposito_mensual }}
+        </div>
+      </div>
+
+      <button type="submit" class="w-full bg-slate-900 hover:bg-slate-800 text-white font-medium px-4 py-2.5 rounded-lg text-sm transition-colors flex items-center justify-center gap-2">
+        <i data-lucide="check" class="w-4 h-4"></i>
+        Guardar Nuevos Límites
+      </button>
+      <p class="text-[10px] text-slate-400 text-center leading-normal">
+        * Reducir tus límites se aplicará al instante. Aumentar tus límites tomará 24 horas en completarse debido al periodo de cooldown reglamentario.
+      </p>
+    </form>
+  </div>
+
+  <!-- Autoexclusión -->
+  <div class="bg-white border border-slate-200 rounded-xl p-6 shadow-sm space-y-4">
+    <div class="flex items-center gap-2 border-b border-slate-100 pb-3">
+      <i data-lucide="user-x" class="w-5 h-5 text-red-600"></i>
+      <h2 class="text-base font-bold text-slate-800">Autoexclusión Voluntaria</h2>
+    </div>
+
+    <div class="p-4 bg-red-50 border border-red-150 rounded-xl text-red-800 text-xs space-y-2 leading-relaxed">
+      <h4 class="font-bold flex items-center gap-1.5">
+        <i data-lucide="alert-triangle" class="w-4 h-4 text-red-600"></i>
+        ¡ATENCIÓN! La autoexclusión es irreversible
+      </h4>
+      <p>
+        Si decides autoexcluirte, se cerrará tu sesión de inmediato y no podrás ingresar a tu cuenta bajo ninguna circunstancia hasta que finalice el periodo elegido. Si eliges autoexclusión indefinida, esta **no podrá ser revertida nunca**.
+      </p>
+    </div>
+
+    <form method="post" action="{% url 'juego_responsable_html' %}" class="space-y-4" onsubmit="return confirm('¿Estás completamente seguro de autoexcluirte? Esta acción no se puede deshacer.');">
+      {% csrf_token %}
+      <input type="hidden" name="action" value="autoexcluirse">
+
+      <div>
+        <label class="block text-xs font-semibold text-slate-600 mb-1.5">Periodo de autoexclusión</label>
+        {{ autoexclusion_form.tipo_autoexclusion }}
+      </div>
+
+      <button type="submit" class="w-full bg-red-600 hover:bg-red-700 text-white font-medium px-4 py-2.5 rounded-lg text-sm transition-colors flex items-center justify-center gap-2 cursor-pointer">
+        <i data-lucide="ban" class="w-4 h-4"></i>
+        Confirmar Autoexclusión
+      </button>
+    </form>
+  </div>
+
+</div>
+{% endblock %}

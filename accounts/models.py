@@ -104,6 +104,11 @@ class PerfilUsuario(models.Model):
         current_value = getattr(self, current_field)
 
         if nuevo_valor == current_value:
+            if self.tipo_limite_pendiente == tipo_limite:
+                self.limite_pendiente = self.tipo_limite_pendiente = (
+                    self.fecha_solicitud_incremento
+                ) = None
+                self.save()
             return
 
         # Reducción: el nuevo límite es menor que el actual

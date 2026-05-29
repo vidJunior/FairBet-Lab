@@ -162,36 +162,5 @@
 
   </div>
 
-  <!-- Límites de Depósito -->
-  <div class="bg-white border border-slate-200 rounded-xl p-6 shadow-sm">
-    <div class="flex items-center gap-2 border-b border-slate-100 pb-4 mb-4">
-      <i data-lucide="shield-check" class="w-4 h-4 text-slate-600"></i>
-      <h2 class="text-sm font-semibold text-slate-800">Juego Responsable — Límites de Depósito</h2>
-    </div>
-    <div class="grid grid-cols-1 md:grid-cols-3 gap-4 text-center">
-      <div>
-        <span class="block text-xs font-bold text-slate-400 uppercase tracking-wide mb-1">Diario</span>
-        <span class="text-base font-semibold text-slate-900">
-          {{ user.perfil.limite_deposito_diario|stringformat:".2f" }}
-          <span class="text-xs font-normal text-slate-500">fichas</span>
-        </span>
-      </div>
-      <div>
-        <span class="block text-xs font-bold text-slate-400 uppercase tracking-wide mb-1">Semanal</span>
-        <span class="text-base font-semibold text-slate-900">
-          {{ user.perfil.limite_deposito_semanal|stringformat:".2f" }}
-          <span class="text-xs font-normal text-slate-500">fichas</span>
-        </span>
-      </div>
-      <div>
-        <span class="block text-xs font-bold text-slate-400 uppercase tracking-wide mb-1">Mensual</span>
-        <span class="text-base font-semibold text-slate-900">
-          {{ user.perfil.limite_deposito_mensual|stringformat:".2f" }}
-          <span class="text-xs font-normal text-slate-500">fichas</span>
-        </span>
-      </div>
-    </div>
-  </div>
-
 </div>
 {% endblock %}

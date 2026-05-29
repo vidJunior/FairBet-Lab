@@ -5,6 +5,7 @@ from .views import (
     LogoutHTMLView,
     HomeHTMLView,
     KYCSuccessHTMLView,
+    JuegoResponsableHTMLView,
 )
 
 urlpatterns = [
@@ -14,4 +15,9 @@ urlpatterns = [
     path("register/", RegistroHTMLView.as_view(), name="register_html"),
     path("login/", LoginHTMLView.as_view(), name="login_html"),
     path("logout/", LogoutHTMLView.as_view(), name="logout_html"),
+    path(
+        "juego-responsable/",
+        JuegoResponsableHTMLView.as_view(),
+        name="juego_responsable_html",
+    ),
 ]

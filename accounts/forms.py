@@ -251,3 +251,57 @@ class RegistroForm(forms.Form):
             except DjangoValidationError as e:
                 self.add_error("digito_verificador", e.messages)
         return cleaned_data
+
+
+class LimitesDepositoForm(forms.ModelForm):
+    class Meta:
+        model = PerfilUsuario
+        fields = [
+            "limite_deposito_diario",
+            "limite_deposito_semanal",
+            "limite_deposito_mensual",
+        ]
+        widgets = {
+            "limite_deposito_diario": forms.NumberInput(
+                attrs={
+                    "class": "w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-slate-500 bg-white",
+                    "step": "0.01",
+                    "min": "0.01",
+                }
+            ),
+            "limite_deposito_semanal": forms.NumberInput(
+                attrs={
+                    "class": "w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-slate-500 bg-white",
+                    "step": "0.01",
+                    "min": "0.01",
+                }
+            ),
+            "limite_deposito_mensual": forms.NumberInput(
+                attrs={
+                    "class": "w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-slate-500 bg-white",
+                    "step": "0.01",
+                    "min": "0.01",
+                }
+            ),
+        }
+
+
+class AutoexclusionForm(forms.ModelForm):
+    class Meta:
+        model = PerfilUsuario
+        fields = ["tipo_autoexclusion"]
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        opciones = []
+
+        for c in TipoAutoexclusion.choices:
+            if c[0] != TipoAutoexclusion.NINGUNA:
+                opciones.append(c)
+
+        self.fields["tipo_autoexclusion"].choices = opciones
+        self.fields["tipo_autoexclusion"].widget.attrs.update(
+            {
+                "class": "w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-slate-500 bg-white"
+            }
+        )

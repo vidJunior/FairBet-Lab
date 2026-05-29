@@ -19,6 +19,33 @@ class Evento(models.Model):
     )
     goles_local = models.IntegerField(default=0, validators=[MinValueValidator(0)])
     goles_visitante = models.IntegerField(default=0, validators=[MinValueValidator(0)])
+    minuto_actual = models.IntegerField(default=0)
+    periodo = models.CharField(max_length=20, default="1T")
+
+    def save(self, *args, **kwargs):
+        # Interceptar cambios en los goles y estados para actualizar cuotas y tiempos dinámicamente
+        if self.pk:
+            try:
+                original = Evento.objects.get(pk=self.pk)
+                
+                # Si pasa de PROGRAMADO a EN_VIVO (ej. desde el Django Admin)
+                if original.estado == EstadoEvento.PROGRAMADO and self.estado == EstadoEvento.EN_VIVO:
+                    self.minuto_actual = 0
+                    self.periodo = "1T"
+                
+                goles_loc_diff = self.goles_local - original.goles_local
+                goles_vis_diff = self.goles_visitante - original.goles_visitante
+                
+                if (goles_loc_diff > 0 or goles_vis_diff > 0) and self.estado == EstadoEvento.EN_VIVO:
+                    # Guardamos el marcador actualizado
+                    super().save(*args, **kwargs)
+                    # Recalcular cuotas dinámicamente
+                    from betting.services import recalcular_cuotas_por_goles
+                    recalcular_cuotas_por_goles(self, goles_loc_diff, goles_vis_diff)
+                    return
+            except Evento.DoesNotExist:
+                pass
+        super().save(*args, **kwargs)
 
     def __str__(self):
         return f"{self.local} vs {self.visitante} ({self.get_estado_display()})"

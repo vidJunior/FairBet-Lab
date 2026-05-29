@@ -174,3 +174,15 @@ CELERY_TASK_SERIALIZER = "json"
 CELERY_RESULT_SERIALIZER = "json"
 CELERY_TIMEZONE = TIME_ZONE
 
+# Programación de Tareas Periódicas (Celery Beat)
+CELERY_BEAT_SCHEDULE = {
+    "auto-iniciar-partidos-en-vivo-cada-10s": {
+        "task": "betting.tasks.actualizar_partidos_a_en_vivo",
+        "schedule": 10.0,  # Verificar cada 10 segundos
+    },
+    "simular-reloj-partidos-en-vivo-cada-5s": {
+        "task": "betting.tasks.simular_minuto_partidos_en_vivo",
+        "schedule": 5.0,   # Simular 1 minuto de partido cada 5 segundos reales
+    },
+}
+

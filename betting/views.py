@@ -14,11 +14,18 @@ from betting.services import crear_apuesta
 def catalogo_html(request):
     saldo = LedgerEntry.get_balance(request.user, TipoCuenta.WALLET_USUARIO)
     
-    eventos = Evento.objects.filter(
-        estado__in=[EstadoEvento.PROGRAMADO, EstadoEvento.EN_VIVO]
+    eventos_en_vivo = Evento.objects.filter(
+        estado=EstadoEvento.EN_VIVO
     ).prefetch_related("mercados__selecciones")
+    
+    eventos_programados = Evento.objects.filter(
+        estado=EstadoEvento.PROGRAMADO
+    ).prefetch_related("mercados__selecciones")
+    
+    eventos_finalizados = Evento.objects.filter(
+        estado=EstadoEvento.FINALIZADO
+    ).prefetch_related("mercados__selecciones").order_by('-fecha_inicio')[:20]
 
-    # Cargar apuestas organizadas
     from config.choices import EstadoApuesta
     apuestas_abiertas = Apuesta.objects.filter(
         usuario=request.user, 
@@ -28,11 +35,13 @@ def catalogo_html(request):
     apuestas_resueltas = Apuesta.objects.filter(
         usuario=request.user, 
         estado__in=[EstadoApuesta.WON, EstadoApuesta.LOST, EstadoApuesta.CANCELLED]
-    ).select_related("seleccion__mercado__evento")
+    ).select_related("seleccion__mercado__evento").order_by('-creado')
 
     context = {
         "saldo": saldo,
-        "eventos": eventos,
+        "eventos_en_vivo": eventos_en_vivo,
+        "eventos_programados": eventos_programados,
+        "eventos_finalizados": eventos_finalizados,
         "apuestas_abiertas": apuestas_abiertas,
         "apuestas_resueltas": apuestas_resueltas,
     }
@@ -54,7 +63,6 @@ def apostar_html(request):
             crear_apuesta(request.user, int(seleccion_id), monto)
             messages.success(request, "¡Tu apuesta ha sido aceptada con éxito!")
         except ValidationError as e:
-            # Capturar y mostrar errores de negocio
             detail = str(e.message if hasattr(e, "message") else e)
             messages.error(request, detail)
         except Exception:

@@ -4,10 +4,10 @@
 {% block title %}Catálogo de Apuestas - FairBet Lab{% endblock %}
 
 {% block content %}
-<div class="w-full max-w-5xl mx-auto px-4 grid grid-cols-1 md:grid-cols-3 gap-8 items-start">
+<div class="w-full max-w-6xl mx-auto grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
   
   <!-- Columna del Catálogo (2/3 de la pantalla) -->
-  <div class="md:col-span-2 space-y-6">
+  <div class="lg:col-span-2 space-y-6">
     <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-200/80 pb-5">
       <div>
         <h2 class="text-2xl font-extrabold tracking-tight text-slate-900 flex items-center gap-2.5">
@@ -54,271 +54,468 @@
       </div>
     {% endif %}
 
-    <!-- Listado de Partidos -->
-    {% if eventos %}
-      <div class="space-y-4">
-        {% for evento in eventos %}
-          <div class="bg-white border border-slate-200/80 rounded-3xl p-6 shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all duration-300">
-            <div class="flex justify-between items-center text-xs font-bold text-slate-400 mb-4 pb-3 border-b border-slate-50">
-              <span class="flex items-center gap-2">
-                <i data-lucide="calendar" class="w-4 h-4 text-slate-400"></i>
-                {{ evento.fecha_inicio|date:"d M, Y - H:i" }}
-              </span>
-              <span class="px-3 py-1 rounded-full uppercase tracking-wider text-[10px] font-extrabold shadow-sm
-                {% if evento.estado == 'en_vivo' %}
-                  bg-rose-50 text-rose-600 border border-rose-100 animate-pulse
-                {% else %}
-                  bg-slate-50 text-slate-500 border border-slate-100
-                {% endif %}">
-                {{ evento.get_estado_display }}
-              </span>
-            </div>
+    <!-- Selector de Pestañas de Eventos -->
+    <div class="flex bg-slate-100/80 p-1.5 rounded-2xl gap-2 border border-slate-200/60 mb-6 relative overflow-hidden shadow-sm">
+      <button 
+        type="button" 
+        onclick="cambiarPestanaEventos('en_vivo')" 
+        id="btn-tab-eventos-en-vivo"
+        class="flex-1 py-3 text-xs font-black uppercase tracking-wider rounded-xl transition-all outline-none text-center bg-white text-rose-600 shadow-sm border border-slate-200/40 flex items-center justify-center gap-2">
+        <span class="relative flex h-3 w-3">
+          <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-rose-400 opacity-75"></span>
+          <span class="relative inline-flex rounded-full h-3 w-3 bg-rose-600"></span>
+        </span>
+        En Vivo ({{ eventos_en_vivo|length }})
+      </button>
+      <button 
+        type="button" 
+        onclick="cambiarPestanaEventos('programados')" 
+        id="btn-tab-eventos-programados"
+        class="flex-1 py-3 text-xs font-bold uppercase tracking-wider rounded-xl transition-all outline-none text-center text-slate-500 hover:text-slate-700 hover:bg-slate-200/50 flex items-center justify-center gap-2">
+        <i data-lucide="calendar-clock" class="w-4 h-4"></i>
+        Programados ({{ eventos_programados|length }})
+      </button>
+      <button 
+        type="button" 
+        onclick="cambiarPestanaEventos('finalizados')" 
+        id="btn-tab-eventos-finalizados"
+        class="flex-1 py-3 text-xs font-bold uppercase tracking-wider rounded-xl transition-all outline-none text-center text-slate-500 hover:text-slate-700 hover:bg-slate-200/50 flex items-center justify-center gap-2">
+        <i data-lucide="check-circle" class="w-4 h-4"></i>
+        Finalizados
+      </button>
+    </div>
 
-            <!-- Enfrentamiento Premium -->
-            <div class="flex items-center justify-between py-4 mb-4 gap-4">
-              <div class="flex-1 text-center md:text-left">
-                <span class="text-lg font-black text-slate-800 tracking-tight block">{{ evento.local }}</span>
+    <!-- Contenedor Pestaña En Vivo -->
+    <div id="tab-eventos-en-vivo" class="space-y-4">
+      {% if eventos_en_vivo %}
+        <div class="space-y-5">
+          {% for evento in eventos_en_vivo %}
+            <div class="bg-white border border-slate-200/80 rounded-3xl p-6 shadow-sm hover:shadow-md transition-all duration-300 relative overflow-hidden">
+              <div class="absolute top-0 left-0 w-1 h-full bg-rose-500"></div>
+              <div class="flex justify-between items-center text-xs font-bold text-slate-400 mb-4 pb-3 border-b border-slate-50">
+                <span class="flex items-center gap-2 text-rose-500">
+                  <i data-lucide="radio" class="w-4 h-4 animate-pulse"></i>
+                  EN VIVO - SIMULACIÓN
+                </span>
+                <span id="evento-badge-{{ evento.id }}" class="px-3 py-1 rounded-full uppercase tracking-widest text-[10px] font-black shadow-sm bg-rose-50 text-rose-600 border border-rose-100 animate-pulse">
+                  {{ evento.get_estado_display }}
+                </span>
               </div>
-              <div class="flex flex-col items-center px-4 text-center">
-                <span class="bg-slate-50 border border-slate-200/60 px-3 py-1 rounded-full text-[10px] text-slate-500 font-extrabold tracking-widest uppercase mb-1 shadow-2xs">VS</span>
-                {% if evento.estado == 'en_vivo' %}
-                  <span class="bg-slate-900 text-white font-mono text-sm px-3 py-1 rounded-xl shadow-md border border-slate-800">
+
+              <!-- Enfrentamiento -->
+              <div class="flex items-center justify-between py-2 mb-4 gap-4">
+                <div class="flex-1 text-center md:text-right">
+                  <span class="text-xl font-black text-slate-800 tracking-tight block">{{ evento.local }}</span>
+                </div>
+                <div class="flex flex-col items-center px-4 text-center">
+                  <span id="marcador-{{ evento.id }}" class="bg-slate-900 text-white font-mono text-2xl font-black px-4 py-2 rounded-xl shadow-md border border-slate-800 tracking-widest">
                     {{ evento.goles_local }} - {{ evento.goles_visitante }}
                   </span>
-                {% endif %}
+                  <span id="tiempo-marcador-{{ evento.id }}" class="text-[11px] text-rose-600 font-black tracking-widest mt-2 px-3 py-1 rounded-full bg-rose-50 border border-rose-100/50 block uppercase animate-pulse">
+                    {% if evento.periodo == 'ET' %}
+                      Entretiempo
+                    {% else %}
+                      {{ evento.minuto_actual }}' - {{ evento.periodo }}
+                    {% endif %}
+                  </span>
+                </div>
+                <div class="flex-1 text-center md:text-left">
+                  <span class="text-xl font-black text-slate-800 tracking-tight block">{{ evento.visitante }}</span>
+                </div>
               </div>
-              <div class="flex-1 text-center md:text-right">
-                <span class="text-lg font-black text-slate-800 tracking-tight block">{{ evento.visitante }}</span>
-              </div>
-            </div>
 
-            <!-- Mercados y Cuotas Premium -->
-            {% for mercado in evento.mercados.all %}
-              {% if mercado.activo %}
-                <div class="border-t border-slate-100 pt-4">
-                  <div class="flex items-center gap-1.5 mb-2.5">
-                    <span class="text-[10px] font-black text-slate-400 uppercase tracking-widest">{{ mercado.nombre }}</span>
+              <!-- Mercados y Cuotas Premium -->
+              {% for mercado in evento.mercados.all %}
+                <div class="border-t border-slate-100 pt-4" id="mercado-{{ mercado.id }}">
+                  <div class="flex justify-between items-center mb-3">
+                    <span class="text-[10px] font-black text-slate-400 uppercase tracking-widest bg-slate-50 px-2 py-1 rounded-md">{{ mercado.nombre }}</span>
+                    {% if not mercado.activo %}
+                      <span id="suspendido-text-{{ mercado.id }}" class="text-[9px] font-black text-white bg-rose-500 px-2 py-0.5 rounded-md uppercase tracking-widest animate-pulse">Suspendido</span>
+                    {% endif %}
                   </div>
                   <div class="grid grid-cols-3 gap-3">
                     {% for seleccion in mercado.selecciones.all %}
                       <button 
                         type="button" 
+                        id="btn-seleccion-{{ seleccion.id }}"
+                        {% if not mercado.activo %}disabled{% endif %}
                         onclick="seleccionarCuota('{{ seleccion.id }}', '{{ seleccion.nombre }}', '{{ seleccion.cuota|stringformat:".2f" }}', '{{ evento.local }} vs {{ evento.visitante }}')"
-                        class="bg-slate-50 border border-slate-200/60 hover:border-indigo-500 hover:bg-indigo-50/20 px-3 py-3 rounded-2xl transition-all duration-200 text-center flex flex-col justify-center items-center group shadow-2xs hover:shadow-xs active:scale-98">
-                        <span class="text-[11px] text-slate-500 font-bold group-hover:text-indigo-700 transition-colors uppercase tracking-wide">{{ seleccion.nombre }}</span>
-                        <span class="text-base font-black text-slate-800 group-hover:text-indigo-900 transition-colors mt-1 font-mono tracking-tight">{{ seleccion.cuota|stringformat:".2f" }}</span>
+                        class="border px-3 py-3.5 rounded-2xl transition-all duration-200 text-center flex flex-col justify-center items-center group shadow-2xs hover:shadow-sm
+                          {% if not mercado.activo %}
+                            opacity-50 cursor-not-allowed bg-slate-100 border-slate-200
+                          {% else %}
+                            bg-white border-slate-200/60 hover:border-indigo-500 hover:bg-indigo-50/30 active:scale-95
+                          {% endif %}">
+                        <span class="text-[10px] text-slate-500 font-bold group-hover:text-indigo-600 transition-colors uppercase tracking-widest mb-1">{{ seleccion.nombre }}</span>
+                        <span id="cuota-val-{{ seleccion.id }}" class="text-lg font-black text-slate-800 group-hover:text-indigo-700 transition-colors font-mono tracking-tight">{{ seleccion.cuota|stringformat:".2f" }}</span>
                       </button>
                     {% endfor %}
                   </div>
                 </div>
-              {% endif %}
-            {% endfor %}
-          </div>
-        {% endfor %}
-      </div>
-    {% else %}
-      <div class="bg-white border border-slate-200 rounded-3xl p-12 text-center text-slate-500 shadow-sm">
-        <div class="p-4 bg-slate-50 rounded-2xl w-fit mx-auto mb-4 border border-slate-100 text-slate-400">
-          <i data-lucide="frown" class="w-10 h-10"></i>
+              {% endfor %}
+            </div>
+          {% endfor %}
         </div>
-        <p class="font-bold text-slate-700 text-lg">No hay eventos disponibles</p>
-        <p class="text-sm text-slate-400 mt-1">Vuelve más tarde para ver nuevos eventos programados.</p>
-      </div>
-    {% endif %}
-  </div>
-
-  <!-- Columna del Boleto de Apuesta y Mis Apuestas (1/3 de la pantalla, sticky completo) -->
-  <div class="md:col-span-1 space-y-6 sticky top-6 self-start">
-    
-    <!-- Boleto de Apuesta (Diseño de Ticket Premium) -->
-    <div id="boleto" class="bg-white border border-slate-200 rounded-3xl p-5 shadow-sm space-y-5 relative overflow-hidden">
-      <!-- Decoración superior estilo ticket -->
-      <div class="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-indigo-500 via-purple-500 to-indigo-600"></div>
-
-      <h3 class="text-lg font-black text-slate-900 border-b border-slate-100 pb-3 flex items-center gap-2">
-        <i data-lucide="ticket" class="w-5 h-5 text-indigo-600"></i>
-        <span>Boleto de Apuesta</span>
-      </h3>
-
-      <!-- Contenedor vacío por defecto -->
-      <div id="boleto-vacio" class="text-center py-10 text-slate-400">
-        <div class="p-3 bg-slate-50 rounded-2xl w-fit mx-auto mb-3.5 border border-slate-100 text-slate-300">
-          <i data-lucide="mouse-pointer-click" class="w-7 h-7"></i>
-        </div>
-        <p class="text-xs font-bold text-slate-700 px-4">Selecciona una cuota</p>
-        <p class="text-[11px] text-slate-400 mt-1 px-4">Haz clic sobre cualquier cuota del catálogo para armar tu cupón.</p>
-      </div>
-
-      <!-- Formulario de apuesta interactivo -->
-      <form id="form-apuesta" action="{% url 'apostar_html' %}" method="POST" class="hidden space-y-4">
-        {% csrf_token %}
-        <input type="hidden" id="input-seleccion-id" name="seleccion_id">
-
-        <!-- Detalle de la Selección (Tarjeta estilizada) -->
-        <div class="bg-slate-50 border border-slate-200/80 p-4 rounded-2xl space-y-2 relative shadow-2xs">
-          <button type="button" onclick="limpiarBoleto()" class="absolute top-3.5 right-3.5 text-slate-400 hover:text-slate-600 transition-colors p-1 hover:bg-slate-200/50 rounded-lg">
-            <i data-lucide="x" class="w-4 h-4"></i>
-          </button>
-          <span id="boleto-evento" class="text-[10px] text-slate-400 font-extrabold uppercase block truncate max-w-[80%] tracking-wider">Evento</span>
-          <span id="boleto-seleccion" class="text-base font-black text-slate-800 block tracking-tight">Selección</span>
-          <div class="flex items-center justify-between pt-2 border-t border-slate-200/60 text-xs">
-            <span class="text-slate-500 font-bold">Cuota fijada</span>
-            <span id="boleto-cuota" class="font-mono font-black text-indigo-600 text-base">0.00</span>
+      {% else %}
+        <div class="bg-white border border-slate-200 rounded-3xl p-12 text-center text-slate-500 shadow-sm">
+          <div class="p-4 bg-slate-50 rounded-2xl w-fit mx-auto mb-4 border border-slate-100 text-slate-400">
+            <i data-lucide="zap-off" class="w-10 h-10"></i>
           </div>
+          <p class="font-bold text-slate-700 text-lg">No hay partidos en vivo</p>
+          <p class="text-sm text-slate-400 mt-1">Los partidos programados pasarán a esta sección cuando comiencen.</p>
         </div>
-
-        <!-- Input de Monto -->
-        <div class="space-y-2">
-          <div class="flex justify-between items-center">
-            <label for="input-monto" class="text-[10px] font-black text-slate-400 uppercase tracking-widest block">Monto a apostar</label>
-            <span class="text-[10px] text-indigo-600 font-bold cursor-pointer hover:underline" onclick="usarMaximo({{ saldo|unlocalize }})">Usar Máx</span>
-          </div>
-          <div class="relative rounded-2xl shadow-2xs">
-            <input 
-              type="number" 
-              step="0.5" 
-              min="0.5" 
-              max="5000"
-              id="input-monto" 
-              name="monto" 
-              required
-              oninput="calcularRetorno()"
-              placeholder="Min. 0.50 fichas"
-              class="w-full bg-slate-50 border border-slate-200 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 rounded-2xl py-3 px-4 text-sm font-black text-slate-800 outline-none transition-all placeholder-slate-400">
-          </div>
-
-          <!-- Botones de montos rápidos -->
-          <div class="grid grid-cols-4 gap-2 pt-1">
-            <button type="button" onclick="sumarMonto(10)" class="bg-slate-50 hover:bg-slate-100 border border-slate-200 rounded-xl py-1.5 text-xs font-bold text-slate-600 transition-colors shadow-2xs hover:shadow-xs active:scale-95">+10</button>
-            <button type="button" onclick="sumarMonto(50)" class="bg-slate-50 hover:bg-slate-100 border border-slate-200 rounded-xl py-1.5 text-xs font-bold text-slate-600 transition-colors shadow-2xs hover:shadow-xs active:scale-95">+50</button>
-            <button type="button" onclick="sumarMonto(100)" class="bg-slate-50 hover:bg-slate-100 border border-slate-200 rounded-xl py-1.5 text-xs font-bold text-slate-600 transition-colors shadow-2xs hover:shadow-xs active:scale-95">+100</button>
-            <button type="button" onclick="limpiarMonto()" class="bg-rose-50 hover:bg-rose-100 border border-rose-100 rounded-xl py-1.5 text-xs font-bold text-rose-600 transition-colors shadow-2xs hover:shadow-xs active:scale-95">Borrar</button>
-          </div>
-        </div>
-
-        <!-- Ganancia Potencial -->
-        <div class="flex items-center justify-between text-sm border-t border-slate-100 pt-4 pb-1">
-          <span class="text-slate-500 font-bold uppercase tracking-wider text-[10px]">Retorno Estimado</span>
-          <span id="retorno-potencial" class="font-black text-emerald-600 text-base font-mono">0.00 fichas</span>
-        </div>
-
-        <!-- Botón de Envío -->
-        <button 
-          type="submit" 
-          class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3.5 rounded-2xl shadow-md hover:shadow-lg transition-all duration-200 text-sm flex items-center justify-center gap-2 active:scale-98">
-          <i data-lucide="play" class="w-4 h-4"></i>
-          <span>Confirmar Apuesta</span>
-        </button>
-      </form>
+      {% endif %}
     </div>
 
-    <!-- Sección de Mis Apuestas (Pestañas Interactivas) -->
-    <div class="bg-white border border-slate-200 rounded-3xl p-5 shadow-sm space-y-4">
-      <h3 class="text-lg font-black text-slate-900 border-b border-slate-100 pb-3 flex items-center gap-2">
-        <i data-lucide="bookmark-check" class="w-5 h-5 text-indigo-600"></i>
+    <!-- Contenedor Pestaña Programados -->
+    <div id="tab-eventos-programados" class="space-y-4 hidden">
+      {% if eventos_programados %}
+        <div class="space-y-5">
+          {% for evento in eventos_programados %}
+            <div class="bg-white border border-slate-200/80 rounded-3xl p-6 shadow-sm hover:shadow-md transition-all duration-300 relative overflow-hidden">
+              <div class="absolute top-0 left-0 w-1 h-full bg-indigo-400"></div>
+              <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center text-xs font-bold text-slate-400 mb-4 pb-3 border-b border-slate-50 gap-2">
+                <div class="flex items-center gap-2">
+                  <div class="p-1.5 bg-indigo-50 text-indigo-500 rounded-lg">
+                    <i data-lucide="calendar" class="w-4 h-4"></i>
+                  </div>
+                  <span class="text-indigo-900 font-black tracking-wide text-sm">{{ evento.fecha_inicio|date:"l, d M Y" }}</span>
+                  <span class="text-slate-400 font-medium">a las</span>
+                  <span class="text-indigo-600 font-bold bg-indigo-50 px-2 py-0.5 rounded-md">{{ evento.fecha_inicio|date:"H:i" }}</span>
+                </div>
+                <span id="evento-badge-{{ evento.id }}" class="px-3 py-1 rounded-full uppercase tracking-wider text-[10px] font-extrabold shadow-sm bg-slate-50 text-slate-500 border border-slate-100">
+                  {{ evento.get_estado_display }}
+                </span>
+              </div>
+
+              <div class="flex items-center justify-between py-2 mb-4 gap-4">
+                <div class="flex-1 text-center md:text-right">
+                  <span class="text-xl font-black text-slate-800 tracking-tight block">{{ evento.local }}</span>
+                </div>
+                <div class="flex flex-col items-center px-4 text-center">
+                  <span class="bg-slate-50 border border-slate-200/60 px-3 py-1.5 rounded-full text-xs text-slate-400 font-black tracking-widest uppercase shadow-2xs">VS</span>
+                </div>
+                <div class="flex-1 text-center md:text-left">
+                  <span class="text-xl font-black text-slate-800 tracking-tight block">{{ evento.visitante }}</span>
+                </div>
+              </div>
+
+              {% for mercado in evento.mercados.all %}
+                {% if mercado.activo %}
+                  <div class="border-t border-slate-100 pt-4">
+                    <div class="flex items-center gap-1.5 mb-3">
+                      <span class="text-[10px] font-black text-slate-400 uppercase tracking-widest bg-slate-50 px-2 py-1 rounded-md">{{ mercado.nombre }}</span>
+                    </div>
+                    <div class="grid grid-cols-3 gap-3">
+                      {% for seleccion in mercado.selecciones.all %}
+                        <button 
+                          type="button" 
+                          id="btn-seleccion-{{ seleccion.id }}"
+                          onclick="seleccionarCuota('{{ seleccion.id }}', '{{ seleccion.nombre }}', '{{ seleccion.cuota|stringformat:".2f" }}', '{{ evento.local }} vs {{ evento.visitante }}')"
+                          class="bg-white border border-slate-200/60 hover:border-indigo-500 hover:bg-indigo-50/30 px-3 py-3.5 rounded-2xl transition-all duration-200 text-center flex flex-col justify-center items-center group shadow-2xs hover:shadow-sm active:scale-95">
+                          <span class="text-[10px] text-slate-500 font-bold group-hover:text-indigo-600 transition-colors uppercase tracking-widest mb-1">{{ seleccion.nombre }}</span>
+                          <span id="cuota-val-{{ seleccion.id }}" class="text-lg font-black text-slate-800 group-hover:text-indigo-700 transition-colors font-mono tracking-tight">{{ seleccion.cuota|stringformat:".2f" }}</span>
+                        </button>
+                      {% endfor %}
+                    </div>
+                  </div>
+                {% endif %}
+              {% endfor %}
+            </div>
+          {% endfor %}
+        </div>
+      {% else %}
+        <div class="bg-white border border-slate-200 rounded-3xl p-12 text-center text-slate-500 shadow-sm">
+          <div class="p-4 bg-slate-50 rounded-2xl w-fit mx-auto mb-4 border border-slate-100 text-slate-400">
+            <i data-lucide="frown" class="w-10 h-10"></i>
+          </div>
+          <p class="font-bold text-slate-700 text-lg">No hay eventos programados</p>
+        </div>
+      {% endif %}
+    </div>
+
+    <!-- Contenedor Pestaña Finalizados -->
+    <div id="tab-eventos-finalizados" class="space-y-4 hidden">
+      {% if eventos_finalizados %}
+        <div class="space-y-5">
+          {% for evento in eventos_finalizados %}
+            <div class="bg-white border border-slate-200/80 rounded-3xl p-6 shadow-sm hover:shadow-md transition-all duration-300 relative overflow-hidden">
+              <div class="absolute top-0 left-0 w-1 h-full bg-slate-400"></div>
+              
+              <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center text-xs font-bold text-slate-400 mb-4 pb-3 border-b border-slate-50 gap-2">
+                <div class="flex items-center gap-2">
+                  <div class="p-1.5 bg-slate-50 text-slate-500 rounded-lg">
+                    <i data-lucide="check-circle-2" class="w-4 h-4"></i>
+                  </div>
+                  <span class="text-slate-600 font-black tracking-wide text-sm">{{ evento.fecha_inicio|date:"l, d M Y" }}</span>
+                </div>
+                <span class="px-3 py-1 rounded-full uppercase tracking-wider text-[10px] font-extrabold shadow-sm bg-slate-100 text-slate-500 border border-slate-200">
+                  FINALIZADO
+                </span>
+              </div>
+
+              <div class="flex items-center justify-between py-2 mb-4 gap-4">
+                <div class="flex-1 text-center md:text-right">
+                  <span class="text-xl font-black text-slate-800 tracking-tight block">{{ evento.local }}</span>
+                </div>
+                <div class="flex flex-col items-center px-4 text-center">
+                  <span class="bg-slate-200 text-slate-700 font-mono text-2xl font-black px-4 py-2 rounded-xl shadow-inner border border-slate-300 tracking-widest">
+                    {{ evento.goles_local }} - {{ evento.goles_visitante }}
+                  </span>
+                </div>
+                <div class="flex-1 text-center md:text-left">
+                  <span class="text-xl font-black text-slate-800 tracking-tight block">{{ evento.visitante }}</span>
+                </div>
+              </div>
+
+              {% for mercado in evento.mercados.all %}
+                <div class="border-t border-slate-100 pt-4">
+                  <div class="flex items-center gap-1.5 mb-3">
+                    <span class="text-[10px] font-black text-slate-400 uppercase tracking-widest bg-slate-50 px-2 py-1 rounded-md">{{ mercado.nombre }}</span>
+                  </div>
+                  <div class="grid grid-cols-3 gap-3">
+                    {% for seleccion in mercado.selecciones.all %}
+                      <button 
+                        type="button" 
+                        disabled
+                        class="border border-slate-200 px-3 py-3.5 rounded-2xl transition-all duration-200 text-center flex flex-col justify-center items-center group bg-slate-50 opacity-70 cursor-not-allowed">
+                        <span class="text-[10px] text-slate-500 font-bold uppercase tracking-widest mb-1">{{ seleccion.nombre }}</span>
+                        <span class="text-lg font-black text-slate-600 font-mono tracking-tight">{{ seleccion.cuota|stringformat:".2f" }}</span>
+                      </button>
+                    {% endfor %}
+                  </div>
+                </div>
+              {% endfor %}
+            </div>
+          {% endfor %}
+        </div>
+      {% else %}
+        <div class="bg-white border border-slate-200 rounded-3xl p-12 text-center text-slate-500 shadow-sm">
+          <div class="p-4 bg-slate-50 rounded-2xl w-fit mx-auto mb-4 border border-slate-100 text-slate-400">
+            <i data-lucide="history" class="w-10 h-10"></i>
+          </div>
+          <p class="font-bold text-slate-700 text-lg">No hay partidos finalizados recientes</p>
+        </div>
+      {% endif %}
+    </div>
+
+  </div>
+
+  <!-- Columna del Boleto de Apuesta y Mis Apuestas (1/3 de la pantalla) -->
+  <div class="lg:col-span-1 space-y-6 sticky top-6 self-start">
+    
+    <!-- Boleto de Apuesta (Diseño de Ticket Premium) -->
+    <div id="boleto" class="bg-white rounded-[2rem] shadow-xl relative overflow-hidden ring-1 ring-slate-200/50">
+      <!-- Decoración ticket superior -->
+      <div class="h-2 w-full bg-gradient-to-r from-indigo-500 via-purple-500 to-indigo-600"></div>
+      
+      <div class="p-6">
+        <h3 class="text-lg font-black text-slate-900 pb-4 border-b-2 border-dashed border-slate-200 flex items-center gap-2">
+          <div class="p-1.5 bg-indigo-50 text-indigo-600 rounded-lg">
+            <i data-lucide="receipt" class="w-5 h-5"></i>
+          </div>
+          <span>Boleto de Apuesta</span>
+        </h3>
+
+        <!-- Contenedor vacío -->
+        <div id="boleto-vacio" class="text-center py-12 text-slate-400">
+          <div class="p-4 bg-slate-50 rounded-full w-fit mx-auto mb-4 border border-slate-100 text-slate-300">
+            <i data-lucide="mouse-pointer-click" class="w-8 h-8"></i>
+          </div>
+          <p class="text-sm font-bold text-slate-700 px-4">Tu boleto está vacío</p>
+          <p class="text-xs text-slate-400 mt-2 px-4 leading-relaxed">Selecciona una cuota del catálogo para armar tu cupón.</p>
+        </div>
+
+        <!-- Formulario -->
+        <form id="form-apuesta" action="{% url 'apostar_html' %}" method="POST" class="hidden space-y-5 pt-4">
+          {% csrf_token %}
+          <input type="hidden" id="input-seleccion-id" name="seleccion_id">
+
+          <!-- Tarjeta de Selección -->
+          <div class="bg-indigo-50/50 border border-indigo-100 p-4 rounded-2xl relative shadow-inner">
+            <button type="button" onclick="limpiarBoleto()" class="absolute top-3 right-3 text-slate-400 hover:text-rose-500 transition-colors p-1.5 hover:bg-white rounded-xl shadow-sm">
+              <i data-lucide="trash-2" class="w-4 h-4"></i>
+            </button>
+            <span id="boleto-evento" class="text-[10px] text-slate-500 font-black uppercase tracking-widest block truncate max-w-[80%] mb-1">Evento</span>
+            <span id="boleto-seleccion" class="text-lg font-black text-slate-900 block tracking-tight mb-3">Selección</span>
+            <div class="flex items-center justify-between pt-3 border-t border-indigo-200/50">
+              <span class="text-xs text-indigo-900/60 font-bold uppercase tracking-wider">Cuota fijada</span>
+              <span id="boleto-cuota" class="font-mono font-black text-indigo-700 text-xl bg-white px-2 py-0.5 rounded-lg shadow-sm border border-indigo-100">0.00</span>
+            </div>
+          </div>
+
+          <!-- Input de Monto -->
+          <div class="space-y-3">
+            <div class="flex justify-between items-end">
+              <label for="input-monto" class="text-[10px] font-black text-slate-500 uppercase tracking-widest block">Inversión (fichas)</label>
+              <button type="button" class="text-[10px] text-indigo-600 font-black uppercase tracking-wider bg-indigo-50 px-2 py-1 rounded-md hover:bg-indigo-100 transition-colors" onclick="usarMaximo({{ saldo|unlocalize }})">MAX</button>
+            </div>
+            <div class="relative">
+              <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                <span class="text-slate-400 font-bold">f.</span>
+              </div>
+              <input 
+                type="number" 
+                step="0.5" 
+                min="0.5" 
+                max="5000"
+                id="input-monto" 
+                name="monto" 
+                required
+                oninput="calcularRetorno()"
+                placeholder="0.00"
+                class="w-full bg-white border-2 border-slate-200 focus:border-indigo-500 focus:ring-0 rounded-2xl py-3.5 pl-9 pr-4 text-lg font-black text-slate-800 outline-none transition-all placeholder-slate-300 shadow-sm">
+            </div>
+
+            <!-- Botones rápidos -->
+            <div class="grid grid-cols-4 gap-2">
+              <button type="button" onclick="sumarMonto(10)" class="bg-white hover:bg-indigo-50 border border-slate-200 hover:border-indigo-200 rounded-xl py-2 text-xs font-black text-slate-600 hover:text-indigo-700 transition-all shadow-sm active:scale-95">+10</button>
+              <button type="button" onclick="sumarMonto(50)" class="bg-white hover:bg-indigo-50 border border-slate-200 hover:border-indigo-200 rounded-xl py-2 text-xs font-black text-slate-600 hover:text-indigo-700 transition-all shadow-sm active:scale-95">+50</button>
+              <button type="button" onclick="sumarMonto(100)" class="bg-white hover:bg-indigo-50 border border-slate-200 hover:border-indigo-200 rounded-xl py-2 text-xs font-black text-slate-600 hover:text-indigo-700 transition-all shadow-sm active:scale-95">+100</button>
+              <button type="button" onclick="limpiarMonto()" class="bg-white hover:bg-rose-50 border border-slate-200 hover:border-rose-200 rounded-xl py-2 text-xs font-black text-slate-400 hover:text-rose-600 transition-all shadow-sm active:scale-95"><i data-lucide="eraser" class="w-4 h-4 mx-auto"></i></button>
+            </div>
+          </div>
+
+          <!-- Ganancia Potencial -->
+          <div class="bg-slate-900 rounded-2xl p-4 mt-2 flex items-center justify-between shadow-lg">
+            <span class="text-white/60 font-black uppercase tracking-widest text-[10px]">Retorno Estimado</span>
+            <span id="retorno-potencial" class="font-black text-emerald-400 text-xl font-mono">0.00</span>
+          </div>
+
+          <!-- Submit -->
+          <button 
+            type="submit" 
+            class="w-full bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white font-black py-4 rounded-2xl shadow-xl shadow-indigo-200 transition-all duration-200 text-sm flex items-center justify-center gap-2 active:scale-95">
+            <span>Apostar Ahora</span>
+            <i data-lucide="arrow-right-circle" class="w-5 h-5"></i>
+          </button>
+        </form>
+      </div>
+      <!-- Decoración ticket inferior -->
+      <div class="h-4 w-full bg-[radial-gradient(circle,theme(colors.slate.100)_4px,transparent_4px)] bg-[length:16px_16px] -mb-2 border-t border-dashed border-slate-200"></div>
+    </div>
+
+    <!-- Mis Apuestas -->
+    <div class="bg-white border border-slate-200/80 rounded-3xl p-5 shadow-sm space-y-4">
+      <h3 class="text-lg font-black text-slate-900 pb-3 flex items-center gap-2">
+        <i data-lucide="list-checks" class="w-5 h-5 text-indigo-600"></i>
         <span>Mis Apuestas</span>
       </h3>
 
-      <!-- Selectores de Pestañas (Estilo Pills Moderno) -->
-      <div class="flex bg-slate-50 p-1 rounded-2xl gap-1 border border-slate-100">
+      <div class="flex bg-slate-100/80 p-1.5 rounded-xl gap-1 border border-slate-200/50">
         <button 
           type="button" 
           onclick="cambiarPestana('abiertas')" 
           id="btn-tab-abiertas"
-          class="flex-1 py-2 text-xs font-bold uppercase tracking-wider rounded-xl transition-all outline-none text-center bg-white text-indigo-700 shadow-sm border border-slate-200/40">
+          class="flex-1 py-2 text-[11px] font-black uppercase tracking-wider rounded-lg transition-all outline-none text-center bg-white text-indigo-700 shadow-sm">
           Abiertas ({{ apuestas_abiertas|length }})
         </button>
         <button 
           type="button" 
           onclick="cambiarPestana('resueltas')" 
           id="btn-tab-resueltas"
-          class="flex-1 py-2 text-xs font-bold uppercase tracking-wider rounded-xl transition-all outline-none text-center text-slate-400 hover:text-slate-600">
+          class="flex-1 py-2 text-[11px] font-black uppercase tracking-wider rounded-lg transition-all outline-none text-center text-slate-500 hover:text-slate-700 hover:bg-slate-200/50">
           Resueltas ({{ apuestas_resueltas|length }})
         </button>
       </div>
 
-      <!-- Contenido Pestaña Abiertas -->
-      <div id="tab-content-abiertas" class="space-y-3">
+      <!-- Abiertas -->
+      <div id="tab-content-abiertas" class="space-y-3 max-h-[400px] overflow-y-auto pr-1 custom-scrollbar">
         {% if apuestas_abiertas %}
           {% for apuesta in apuestas_abiertas %}
-            <div class="bg-slate-50/50 border border-slate-200/80 p-4 rounded-2xl space-y-2 text-xs hover:border-indigo-200 hover:bg-white transition-all duration-200 shadow-2xs">
-              <div class="flex justify-between items-center pb-2 border-b border-slate-100">
-                <span class="text-[9px] font-black text-slate-400 uppercase tracking-wider truncate max-w-[70%]">{{ apuesta.seleccion.mercado.evento.local }} vs {{ apuesta.seleccion.mercado.evento.visitante }}</span>
-                <span class="bg-indigo-50 text-indigo-600 font-extrabold px-2 py-0.5 rounded-full text-[9px] uppercase tracking-wider border border-indigo-100">Abierta</span>
+            <div class="bg-white border-2 border-slate-100 p-4 rounded-2xl space-y-3 hover:border-indigo-300 transition-all shadow-sm">
+              <div class="flex justify-between items-center pb-2 border-b border-slate-50">
+                <span class="text-[9px] font-black text-slate-400 uppercase tracking-widest truncate max-w-[70%]">{{ apuesta.seleccion.mercado.evento.local }} vs {{ apuesta.seleccion.mercado.evento.visitante }}</span>
+                <span class="font-black px-2 py-0.5 rounded-md text-[9px] uppercase tracking-widest
+                  {% if apuesta.seleccion.mercado.evento.estado == 'PROGRAMADO' %}
+                    bg-slate-100 text-slate-500
+                  {% elif apuesta.seleccion.mercado.evento.estado == 'EN_VIVO' %}
+                    bg-rose-50 text-rose-600 animate-pulse
+                  {% else %}
+                    bg-indigo-50 text-indigo-600
+                  {% endif %}">
+                  {% if apuesta.seleccion.mercado.evento.estado == 'PROGRAMADO' %}
+                    PROGRAMADO
+                  {% elif apuesta.seleccion.mercado.evento.estado == 'EN_VIVO' %}
+                    EN VIVO
+                  {% else %}
+                    {{ apuesta.seleccion.mercado.evento.get_estado_display }}
+                  {% endif %}
+                </span>
               </div>
-              <div class="flex justify-between text-slate-700 font-bold">
-                <span>Selección: <strong class="text-slate-900">{{ apuesta.seleccion.nombre }}</strong></span>
-                <span class="font-black text-slate-900 font-mono">@{{ apuesta.cuota_fijada|stringformat:".2f" }}</span>
+              <div class="flex justify-between text-slate-700 font-black">
+                <span class="text-slate-900 text-sm">{{ apuesta.seleccion.nombre }}</span>
+                <span class="font-mono text-indigo-700">@{{ apuesta.cuota_fijada|stringformat:".2f" }}</span>
               </div>
-              <div class="flex justify-between text-slate-400 pt-1 text-[11px] font-semibold">
-                <span>Apostado: f. {{ apuesta.monto|stringformat:".2f" }}</span>
-                <span class="font-extrabold text-indigo-600">Retorno: f. {{ apuesta.payout|stringformat:".2f" }}</span>
+              <div class="flex justify-between bg-slate-50 p-2 rounded-xl text-[10px] font-bold">
+                <span class="text-slate-500">Inversión: f. {{ apuesta.monto|stringformat:".2f" }}</span>
+                <span class="text-indigo-600">Gana: f. {{ apuesta.payout|stringformat:".2f" }}</span>
               </div>
             </div>
           {% endfor %}
         {% else %}
-          <div class="text-center py-8 text-slate-400 text-xs font-semibold">
-            <i data-lucide="info" class="w-5 h-5 mx-auto mb-2 text-slate-300"></i>
-            No tienes apuestas abiertas.
+          <div class="text-center py-10 text-slate-400">
+            <i data-lucide="inbox" class="w-8 h-8 mx-auto mb-3 text-slate-200"></i>
+            <p class="text-xs font-bold text-slate-500">No tienes apuestas activas</p>
           </div>
         {% endif %}
       </div>
 
-      <!-- Contenido Pestaña Resueltas -->
-      <div id="tab-content-resueltas" class="hidden space-y-3">
+      <!-- Resueltas -->
+      <div id="tab-content-resueltas" class="hidden space-y-3 max-h-[400px] overflow-y-auto pr-1 custom-scrollbar">
         {% if apuestas_resueltas %}
           {% for apuesta in apuestas_resueltas %}
-            <div class="border p-4 rounded-2xl space-y-2 text-xs transition-all duration-200 hover:-translate-y-0.5 shadow-2xs
+            <div class="border-2 p-4 rounded-2xl space-y-3 transition-all shadow-sm
               {% if apuesta.estado == 'won' %}
-                bg-emerald-50/40 border-emerald-200 hover:bg-emerald-50/60
+                bg-emerald-50/30 border-emerald-100 hover:border-emerald-300
               {% elif apuesta.estado == 'lost' %}
-                bg-rose-50/20 border-rose-200/60 hover:bg-rose-50/40
+                bg-rose-50/20 border-rose-100 hover:border-rose-200
               {% else %}
                 bg-slate-50 border-slate-200
               {% endif %}">
               <div class="flex justify-between items-center pb-2 border-b 
-                {% if apuesta.estado == 'won' %}border-emerald-100/50{% elif apuesta.estado == 'lost' %}border-rose-100/50{% else %}border-slate-100{% endif %}">
-                <span class="text-[9px] font-black text-slate-400 uppercase tracking-wider truncate max-w-[70%]">{{ apuesta.seleccion.mercado.evento.local }} vs {{ apuesta.seleccion.mercado.evento.visitante }}</span>
-                <span class="font-extrabold px-2.5 py-0.5 rounded-full text-[9px] uppercase tracking-wider border
+                {% if apuesta.estado == 'won' %}border-emerald-100/50{% elif apuesta.estado == 'lost' %}border-rose-100/50{% else %}border-slate-200/50{% endif %}">
+                <span class="text-[9px] font-black text-slate-400 uppercase tracking-widest truncate max-w-[70%]">{{ apuesta.seleccion.mercado.evento.local }} vs {{ apuesta.seleccion.mercado.evento.visitante }}</span>
+                <span class="font-black px-2 py-0.5 rounded-md text-[9px] uppercase tracking-widest
                   {% if apuesta.estado == 'won' %}
-                    bg-emerald-100 text-emerald-800 border-emerald-200
+                    bg-emerald-500 text-white
                   {% elif apuesta.estado == 'lost' %}
-                    bg-rose-100 text-rose-800 border-rose-200
+                    bg-rose-500 text-white
                   {% else %}
-                    bg-slate-100 text-slate-700 border-slate-200
+                    bg-slate-500 text-white
                   {% endif %}">
-                  {{ apuesta.get_estado_display }}
+                  {% if apuesta.estado == 'won' %}GANADA{% elif apuesta.estado == 'lost' %}PERDIDA{% else %}ANULADA{% endif %}
                 </span>
               </div>
-              <div class="flex justify-between text-slate-700 font-bold">
-                <span>Selección: <strong class="text-slate-900">{{ apuesta.seleccion.nombre }}</strong></span>
-                <span class="font-black text-slate-900 font-mono">@{{ apuesta.cuota_fijada|stringformat:".2f" }}</span>
+              <div class="flex justify-between text-slate-700 font-black">
+                <span class="text-slate-900 text-sm">{{ apuesta.seleccion.nombre }}</span>
+                <span class="font-mono text-slate-600">@{{ apuesta.cuota_fijada|stringformat:".2f" }}</span>
               </div>
-              <div class="flex justify-between pt-1 font-bold text-[11px]
+              <div class="flex justify-between p-2 rounded-xl text-[10px] font-bold
                 {% if apuesta.estado == 'won' %}
-                  text-emerald-800
+                  bg-emerald-100/50 text-emerald-800
                 {% elif apuesta.estado == 'lost' %}
-                  text-rose-800
+                  bg-rose-100/50 text-rose-800
                 {% else %}
-                  text-slate-500
+                  bg-slate-200/50 text-slate-700
                 {% endif %}">
-                <span>Apostado: f. {{ apuesta.monto|stringformat:".2f" }}</span>
-                <span class="font-black">
+                <span>Inversión: f. {{ apuesta.monto|stringformat:".2f" }}</span>
+                <span>
                   {% if apuesta.estado == 'won' %}
-                    Cobrado: f. {{ apuesta.payout|stringformat:".2f" }}
+                    + f. {{ apuesta.payout|stringformat:".2f" }}
                   {% elif apuesta.estado == 'lost' %}
-                    Perdido: -f. {{ apuesta.monto|stringformat:".2f" }}
+                    - f. {{ apuesta.monto|stringformat:".2f" }}
                   {% else %}
-                    Devuelto: f. {{ apuesta.monto|stringformat:".2f" }}
+                    Reembolso
                   {% endif %}
                 </span>
               </div>
             </div>
           {% endfor %}
         {% else %}
-          <div class="text-center py-8 text-slate-400 text-xs font-semibold">
-            <i data-lucide="info" class="w-5 h-5 mx-auto mb-2 text-slate-300"></i>
-            No tienes apuestas resueltas aún.
+          <div class="text-center py-10 text-slate-400">
+            <i data-lucide="clock" class="w-8 h-8 mx-auto mb-3 text-slate-200"></i>
+            <p class="text-xs font-bold text-slate-500">Aún no hay resultados</p>
           </div>
         {% endif %}
       </div>
@@ -326,7 +523,157 @@
   </div>
 </div>
 
+<style>
+.custom-scrollbar::-webkit-scrollbar {
+  width: 4px;
+}
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background-color: #cbd5e1;
+  border-radius: 10px;
+}
+</style>
+
 <script>
+  // Cambiar pestaña del catálogo de partidos
+  function cambiarPestanaEventos(tipo) {
+    const tabVivo = document.getElementById("tab-eventos-en-vivo");
+    const tabProgramados = document.getElementById("tab-eventos-programados");
+    const tabFinalizados = document.getElementById("tab-eventos-finalizados");
+    
+    const btnVivo = document.getElementById("btn-tab-eventos-en-vivo");
+    const btnProgramados = document.getElementById("btn-tab-eventos-programados");
+    const btnFinalizados = document.getElementById("btn-tab-eventos-finalizados");
+
+    // Clases base
+    const claseInactiva = "flex-1 py-3 text-xs font-bold uppercase tracking-wider rounded-xl transition-all outline-none text-center text-slate-500 hover:text-slate-700 hover:bg-slate-200/50 flex items-center justify-center gap-2";
+    const claseActivaEnVivo = "flex-1 py-3 text-xs font-black uppercase tracking-wider rounded-xl transition-all outline-none text-center bg-white text-rose-600 shadow-sm border border-slate-200/40 flex items-center justify-center gap-2";
+    const claseActivaOtros = "flex-1 py-3 text-xs font-black uppercase tracking-wider rounded-xl transition-all outline-none text-center bg-white text-indigo-700 shadow-sm border border-slate-200/40 flex items-center justify-center gap-2";
+
+    tabVivo.classList.add("hidden");
+    tabProgramados.classList.add("hidden");
+    tabFinalizados.classList.add("hidden");
+    
+    btnVivo.className = claseInactiva;
+    btnProgramados.className = claseInactiva;
+    btnFinalizados.className = claseInactiva;
+
+    if (tipo === "en_vivo") {
+      tabVivo.classList.remove("hidden");
+      btnVivo.className = claseActivaEnVivo;
+    } else if (tipo === "programados") {
+      tabProgramados.classList.remove("hidden");
+      btnProgramados.className = claseActivaOtros;
+    } else if (tipo === "finalizados") {
+      tabFinalizados.classList.remove("hidden");
+      btnFinalizados.className = claseActivaOtros;
+    }
+  }
+
+  // Conectar WebSocket para recibir cuotas y marcadores en tiempo real
+  const wsScheme = window.location.protocol === "https:" ? "wss" : "ws";
+  const oddsSocket = new WebSocket(`${wsScheme}://${window.location.host}/ws/live-odds/`);
+
+  oddsSocket.onmessage = function(e) {
+    const data = JSON.parse(e.data);
+    console.log("WebSocket Recibido:", data);
+
+    if (data.nuevas_cuotas) {
+      for (const [selId, nuevaCuota] of Object.entries(data.nuevas_cuotas)) {
+        const cuotaSpan = document.getElementById(`cuota-val-${selId}`);
+        if (cuotaSpan) {
+          cuotaSpan.innerText = parseFloat(nuevaCuota).toFixed(2);
+        }
+        
+        const btn = document.getElementById(`btn-seleccion-${selId}`);
+        if (btn) {
+          const oldOnclick = btn.getAttribute("onclick");
+          if (oldOnclick) {
+            const match = oldOnclick.match(/seleccionarCuota\('([^']*)',\s*'([^']*)',\s*'([^']*)',\s*'([^']*)'\)/);
+            if (match) {
+              btn.setAttribute("onclick", `seleccionarCuota('${match[1]}', '${match[2]}', '${parseFloat(nuevaCuota).toFixed(2)}', '${match[4]}')`);
+            }
+          }
+        }
+
+        const inputSeleccionId = document.getElementById("input-seleccion-id").value;
+        if (inputSeleccionId === selId) {
+          document.getElementById("boleto-cuota").innerText = parseFloat(nuevaCuota).toFixed(2);
+          calcularRetorno();
+        }
+      }
+    }
+
+    if (data.estado_mercados === "SUSPENDIDOS") {
+      const badge = document.getElementById(`evento-badge-${data.evento_id}`);
+      if (badge) {
+        badge.innerText = "SUSPENDIDO";
+        badge.className = "px-3 py-1 rounded-full uppercase tracking-wider text-[10px] font-extrabold shadow-sm bg-rose-100 text-rose-800 border border-rose-200 animate-pulse";
+      }
+      const evId = data.evento_id;
+      const buttons = document.querySelectorAll(`[id^="btn-seleccion-"]`);
+      buttons.forEach(btn => {
+        const clickAttr = btn.getAttribute("onclick");
+        if (clickAttr && clickAttr.includes(`vs`)) {
+          btn.setAttribute("disabled", "true");
+          btn.className = "border px-3 py-3.5 rounded-2xl transition-all duration-200 text-center flex flex-col justify-center items-center group shadow-2xs opacity-50 cursor-not-allowed bg-slate-100 border-slate-200";
+        }
+      });
+      const mText = document.querySelectorAll(`[id^="suspendido-text-"]`);
+      mText.forEach(el => el.classList.remove("hidden"));
+    } 
+    else if (data.estado_mercados === "ACTIVOS") {
+      const badge = document.getElementById(`evento-badge-${data.evento_id}`);
+      if (badge) {
+        badge.innerText = "EN VIVO";
+        badge.className = "px-3 py-1 rounded-full uppercase tracking-widest text-[10px] font-black shadow-sm bg-rose-50 text-rose-600 border border-rose-100 animate-pulse";
+      }
+      const buttons = document.querySelectorAll(`[id^="btn-seleccion-"]`);
+      buttons.forEach(btn => {
+        btn.removeAttribute("disabled");
+        btn.className = "bg-white border border-slate-200/60 hover:border-indigo-500 hover:bg-indigo-50/30 px-3 py-3.5 rounded-2xl transition-all duration-200 text-center flex flex-col justify-center items-center group shadow-2xs hover:shadow-sm active:scale-95";
+      });
+      const mText = document.querySelectorAll(`[id^="suspendido-text-"]`);
+      mText.forEach(el => el.classList.add("hidden"));
+    }
+
+    if (data.tipo_evento === "EVENTO_CRITICO") {
+      const marcador = document.getElementById(`marcador-${data.evento_id}`);
+      if (marcador) {
+        marcador.innerText = `${data.goles_local} - ${data.goles_visitante}`;
+      }
+    }
+
+    if (data.tipo_evento === "EVENTO_TIEMPO") {
+      const tiempoMarcador = document.getElementById(`tiempo-marcador-${data.evento_id}`);
+      if (tiempoMarcador) {
+        tiempoMarcador.innerText = data.periodo_display;
+      }
+      const marcador = document.getElementById(`marcador-${data.evento_id}`);
+      if (marcador) {
+        marcador.innerText = `${data.goles_local} - ${data.goles_visitante}`;
+      }
+    }
+
+    if (data.tipo_evento === "EVENTO_EN_VIVO" && data.estado === "en_vivo") {
+      window.location.reload();
+    }
+    
+    if (data.tipo_evento === "EVENTO_FINALIZADO") {
+      window.location.reload();
+    }
+  };
+
+  oddsSocket.onclose = function(e) {
+    console.error("Conexión WebSocket cerrada. Reintentando conectar...");
+    setTimeout(() => {
+      window.location.reload();
+    }, 5000);
+  };
+
+  // Cambiar pestañas de Mis Apuestas
   function cambiarPestana(tipo) {
     const tabAbiertas = document.getElementById("tab-content-abiertas");
     const tabResueltas = document.getElementById("tab-content-resueltas");
@@ -336,15 +683,13 @@
     if (tipo === "abiertas") {
       tabAbiertas.classList.remove("hidden");
       tabResueltas.classList.add("hidden");
-      
-      btnAbiertas.className = "flex-1 py-2 text-xs font-bold uppercase tracking-wider rounded-xl transition-all outline-none text-center bg-white text-indigo-700 shadow-sm border border-slate-200/40";
-      btnResueltas.className = "flex-1 py-2 text-xs font-bold uppercase tracking-wider rounded-xl transition-all outline-none text-center text-slate-400 hover:text-slate-600";
+      btnAbiertas.className = "flex-1 py-2 text-[11px] font-black uppercase tracking-wider rounded-lg transition-all outline-none text-center bg-white text-indigo-700 shadow-sm";
+      btnResueltas.className = "flex-1 py-2 text-[11px] font-black uppercase tracking-wider rounded-lg transition-all outline-none text-center text-slate-500 hover:text-slate-700 hover:bg-slate-200/50";
     } else {
       tabAbiertas.classList.add("hidden");
       tabResueltas.classList.remove("hidden");
-
-      btnAbiertas.className = "flex-1 py-2 text-xs font-bold uppercase tracking-wider rounded-xl transition-all outline-none text-center text-slate-400 hover:text-slate-600";
-      btnResueltas.className = "flex-1 py-2 text-xs font-bold uppercase tracking-wider rounded-xl transition-all outline-none text-center bg-white text-indigo-700 shadow-sm border border-slate-200/40";
+      btnAbiertas.className = "flex-1 py-2 text-[11px] font-black uppercase tracking-wider rounded-lg transition-all outline-none text-center text-slate-500 hover:text-slate-700 hover:bg-slate-200/50";
+      btnResueltas.className = "flex-1 py-2 text-[11px] font-black uppercase tracking-wider rounded-lg transition-all outline-none text-center bg-white text-indigo-700 shadow-sm";
     }
   }
 
@@ -354,15 +699,13 @@
     document.getElementById("boleto-seleccion").innerText = nombre;
     document.getElementById("boleto-cuota").innerText = cuota;
     
-    // Cambiar visualización
     document.getElementById("boleto-vacio").classList.add("hidden");
     const form = document.getElementById("form-apuesta");
     form.classList.remove("hidden");
     
-    // Enfocar input de monto
     const inputMonto = document.getElementById("input-monto");
     inputMonto.value = "";
-    document.getElementById("retorno-potencial").innerText = "0.00 fichas";
+    document.getElementById("retorno-potencial").innerText = "0.00";
     inputMonto.focus();
   }
 
@@ -370,7 +713,7 @@
     const monto = parseFloat(document.getElementById("input-monto").value) || 0;
     const cuota = parseFloat(document.getElementById("boleto-cuota").innerText) || 0;
     const retorno = (monto * cuota).toFixed(2);
-    document.getElementById("retorno-potencial").innerText = `${retorno} fichas`;
+    document.getElementById("retorno-potencial").innerText = `${retorno}`;
   }
 
   function sumarMonto(cantidad) {
@@ -382,7 +725,6 @@
 
   function usarMaximo(saldoMaximo) {
     const input = document.getElementById("input-monto");
-    // Límite máximo reglamentario de 5000 fichas
     const maximo = Math.min(saldoMaximo, 5000);
     input.value = maximo.toFixed(2);
     calcularRetorno();
@@ -390,7 +732,7 @@
 
   function limpiarMonto() {
     document.getElementById("input-monto").value = "";
-    document.getElementById("retorno-potencial").innerText = "0.00 fichas";
+    document.getElementById("retorno-potencial").innerText = "0.00";
   }
 
   function limpiarBoleto() {

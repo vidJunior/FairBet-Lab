@@ -22,7 +22,7 @@ services:
 
   celery:
     build: .
-    command: celery -A config worker --loglevel=info
+    command: celery -A config worker --beat --loglevel=info
     volumes:
       - .:/app
     env_file:

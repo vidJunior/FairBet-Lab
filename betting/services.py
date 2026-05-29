@@ -14,28 +14,34 @@ from betting.tasks import reactivar_mercados_evento
 
 
 def obtener_seleccion_ganadora_1x2(evento):
-    """
-    Retorna la selección ganadora (Local, Empate, Visitante)
-    basado en los goles del evento finalizado.
-    """
     mercado_1x2 = evento.mercados.filter(nombre="1X2").first()
     if not mercado_1x2:
         return None
         
+    seleccion_local = mercado_1x2.selecciones.filter(nombre__icontains="local").first()
+    seleccion_empate = mercado_1x2.selecciones.filter(nombre__icontains="empate").first()
+    seleccion_visitante = mercado_1x2.selecciones.filter(nombre__icontains="visitante").first()
+
+    # Fallback de seguridad por orden de creación (0: Local, 1: Empate, 2: Visitante)
+    selecciones = list(mercado_1x2.selecciones.all().order_by("id"))
+    if len(selecciones) == 3:
+        if not seleccion_local:
+            seleccion_local = selecciones[0]
+        if not seleccion_empate:
+            seleccion_empate = selecciones[1]
+        if not seleccion_visitante:
+            seleccion_visitante = selecciones[2]
+            
     if evento.goles_local > evento.goles_visitante:
-        return mercado_1x2.selecciones.filter(nombre="Local").first()
+        return seleccion_local
     elif evento.goles_local < evento.goles_visitante:
-        return mercado_1x2.selecciones.filter(nombre="Visitante").first()
+        return seleccion_visitante
     else:
-        return mercado_1x2.selecciones.filter(nombre="Empate").first()
+        return seleccion_empate
 
 
 @transaction.atomic
 def crear_apuesta(user, seleccion_id, monto, cuota_esperada=None):
-    """
-    Crea una apuesta simple. Valida límites de apuestas, saldo, 
-    estado del perfil, autoexclusión y la política de re-cotización.
-    """
     monto = Decimal(str(monto))
     if monto <= Decimal("0.0000"):
         raise ValidationError("El monto de la apuesta debe ser mayor a cero.")
@@ -112,10 +118,6 @@ def crear_apuesta(user, seleccion_id, monto, cuota_esperada=None):
 
 @transaction.atomic
 def crear_apuesta_combinada(user, seleccion_ids, monto, cuotas_esperadas=None):
-    """
-    Crea una apuesta combinada (acumuladora).
-    Valida exclusión mutua de eventos, cuotas y límites transaccionales.
-    """
     monto = Decimal(str(monto))
     if monto <= Decimal("0.0000"):
         raise ValidationError("El monto de la apuesta debe ser mayor a cero.")
@@ -209,10 +211,6 @@ def crear_apuesta_combinada(user, seleccion_ids, monto, cuotas_esperadas=None):
 
 @transaction.atomic
 def liquidar_apuestas_evento(evento_id, seleccion_ganadora_id):
-    """
-    Liquida apuestas simples y evalúa apuestas combinadas que contienen
-    selecciones asociadas a este evento.
-    """
     try:
         evento = Evento.objects.get(pk=evento_id)
     except Evento.DoesNotExist:
@@ -324,10 +322,6 @@ def liquidar_apuestas_evento(evento_id, seleccion_ganadora_id):
 
 @transaction.atomic
 def actualizar_cuota_seleccion(seleccion_id, nueva_cuota):
-    """
-    Actualiza la cuota de una selección y transmite los cambios por WebSocket
-    para mantener cuotas en tiempo real.
-    """
     nueva_cuota = Decimal(str(nueva_cuota))
     try:
         seleccion = Seleccion.objects.select_related("mercado__evento").get(pk=seleccion_id)
@@ -357,12 +351,100 @@ def actualizar_cuota_seleccion(seleccion_id, nueva_cuota):
 
 
 @transaction.atomic
+def recalcular_cuotas_por_goles(evento, goles_local_nuevos, goles_visitante_nuevos):
+    if goles_local_nuevos <= 0 and goles_visitante_nuevos <= 0:
+        return
+
+    mercado_1x2 = evento.mercados.filter(nombre="1X2").first()
+    if mercado_1x2:
+        seleccion_local = mercado_1x2.selecciones.filter(nombre__icontains="local").first()
+        seleccion_empate = mercado_1x2.selecciones.filter(nombre__icontains="empate").first()
+        seleccion_visitante = mercado_1x2.selecciones.filter(nombre__icontains="visitante").first()
+        
+        # Fallback de seguridad por orden de creación (0: Local, 1: Empate, 2: Visitante)
+        selecciones = list(mercado_1x2.selecciones.all().order_by("id"))
+        if len(selecciones) == 3:
+            if not seleccion_local:
+                seleccion_local = selecciones[0]
+            if not seleccion_empate:
+                seleccion_empate = selecciones[1]
+            if not seleccion_visitante:
+                seleccion_visitante = selecciones[2]
+        
+        if seleccion_local and seleccion_empate and seleccion_visitante:
+            o_local = Decimal(str(seleccion_local.cuota))
+            o_empate = Decimal(str(seleccion_empate.cuota))
+            o_visitante = Decimal(str(seleccion_visitante.cuota))
+            
+            # Convertir a probabilidades implícitas
+            p_local = Decimal("1.0000") / o_local
+            p_empate = Decimal("1.0000") / o_empate
+            p_visitante = Decimal("1.0000") / o_visitante
+            
+            # Modificar probabilidades según la cantidad de goles nuevos
+            p_local += Decimal("0.2000") * Decimal(str(goles_local_nuevos))
+            p_visitante -= Decimal("0.1500") * Decimal(str(goles_local_nuevos))
+            p_empate -= Decimal("0.0500") * Decimal(str(goles_local_nuevos))
+            
+            p_visitante += Decimal("0.2000") * Decimal(str(goles_visitante_nuevos))
+            p_local -= Decimal("0.1500") * Decimal(str(goles_visitante_nuevos))
+            p_empate -= Decimal("0.0500") * Decimal(str(goles_visitante_nuevos))
+            
+            # Limitar probabilidades para evitar cuotas negativas o absurdas
+            p_local = max(Decimal("0.0200"), min(p_local, Decimal("0.9500")))
+            p_visitante = max(Decimal("0.0200"), min(p_visitante, Decimal("0.9500")))
+            p_empate = max(Decimal("0.0200"), min(p_empate, Decimal("0.9500")))
+            
+            # Recalcular nuevas cuotas
+            nueva_c_local = (Decimal("1.0000") / p_local).quantize(Decimal("0.01"))
+            nueva_c_empate = (Decimal("1.0000") / p_empate).quantize(Decimal("0.01"))
+            nueva_c_visitante = (Decimal("1.0000") / p_visitante).quantize(Decimal("0.01"))
+            
+            # Actualizar cuotas y guardar (usar mínimo 1.01)
+            seleccion_local.cuota = max(Decimal("1.0100"), nueva_c_local)
+            seleccion_local.save()
+            
+            seleccion_empate.cuota = max(Decimal("1.0100"), nueva_c_empate)
+            seleccion_empate.save()
+            
+            seleccion_visitante.cuota = max(Decimal("1.0100"), nueva_c_visitante)
+            seleccion_visitante.save()
+
+    # Suspender temporalmente mercados
+    Mercado.objects.filter(evento=evento).update(activo=False)
+
+    # Transmitir suspensión a WebSockets
+    channel_layer = get_channel_layer()
+    if channel_layer:
+        # Obtener cuotas actualizadas para enviar en la transmisión
+        mercado_1x2 = evento.mercados.filter(nombre="1X2").first()
+        cuotas_data = {}
+        if mercado_1x2:
+            for s in mercado_1x2.selecciones.all():
+                cuotas_data[s.id] = str(s.cuota)
+
+        async_to_sync(channel_layer.group_send)(
+            "live_odds",
+            {
+                "type": "odds_update",
+                "data": {
+                    "tipo_evento": "EVENTO_CRITICO",
+                    "evento_id": evento.id,
+                    "evento_critico": "GOLES_ACTUALIZADOS",
+                    "goles_local": evento.goles_local,
+                    "goles_visitante": evento.goles_visitante,
+                    "estado_mercados": "SUSPENDIDOS",
+                    "nuevas_cuotas": cuotas_data
+                }
+            }
+        )
+
+    # Programar reactivación asíncrona de los mercados tras 15 segundos
+    reactivar_mercados_evento.delay(evento.id)
+
+
+@transaction.atomic
 def registrar_evento_critico(evento_id, tipo_evento_critico):
-    """
-    Registra un evento crítico (GOL, ROJA).
-    Actualiza marcador/tarjetas, suspende el mercado del evento,
-    transmite la suspensión y programa su reactivación automática tras 15s.
-    """
     try:
         evento = Evento.objects.get(pk=evento_id)
     except Evento.DoesNotExist:
@@ -375,30 +457,7 @@ def registrar_evento_critico(evento_id, tipo_evento_critico):
         evento.goles_visitante += 1
     
     evento.estado = EstadoEvento.EN_VIVO
+    # Guardamos. Nota: Esto activará Evento.save(), que a su vez llama a recalcular_cuotas_por_goles!
     evento.save()
-
-    # Suspender los mercados
-    Mercado.objects.filter(evento=evento).update(activo=False)
-
-    # Transmitir suspensión a WebSockets
-    channel_layer = get_channel_layer()
-    if channel_layer:
-        async_to_sync(channel_layer.group_send)(
-            "live_odds",
-            {
-                "type": "odds_update",
-                "data": {
-                    "tipo_evento": "EVENTO_CRITICO",
-                    "evento_id": evento.id,
-                    "evento_critico": tipo_evento_critico,
-                    "goles_local": evento.goles_local,
-                    "goles_visitante": evento.goles_visitante,
-                    "estado_mercados": "SUSPENDIDOS"
-                }
-            }
-        )
-
-    # Programar reactivación asíncrona de los mercados tras 15 segundos
-    reactivar_mercados_evento.delay(evento.id)
 
     return evento

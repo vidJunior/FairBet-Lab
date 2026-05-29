@@ -17,11 +17,11 @@ def catalogo_html(request):
     
     eventos_en_vivo = Evento.objects.filter(
         estado=EstadoEvento.EN_VIVO
-    ).prefetch_related("mercados__selecciones")
+    ).prefetch_related("mercados__selecciones").order_by("fecha_inicio")
     
     eventos_programados = Evento.objects.filter(
         estado=EstadoEvento.PROGRAMADO
-    ).prefetch_related("mercados__selecciones")
+    ).prefetch_related("mercados__selecciones").order_by("fecha_inicio")
     
     eventos_finalizados = Evento.objects.filter(
         estado=EstadoEvento.FINALIZADO
@@ -31,7 +31,7 @@ def catalogo_html(request):
     apuestas_abiertas = Apuesta.objects.filter(
         usuario=request.user, 
         estado=EstadoApuesta.ACCEPTED
-    ).select_related("seleccion__mercado__evento").prefetch_related("detalles__seleccion__mercado__evento")
+    ).select_related("seleccion__mercado__evento").prefetch_related("detalles__seleccion__mercado__evento").order_by("-creado")
 
     apuestas_resueltas = Apuesta.objects.filter(
         usuario=request.user, 
@@ -58,33 +58,72 @@ def apostar_html(request):
     if request.method == "POST":
         seleccion_ids_raw = request.POST.get("seleccion_ids")
         cuotas_esperadas_raw = request.POST.get("cuotas_esperadas")
-        monto_raw = request.POST.get("monto")
+        tipo_apuesta = request.POST.get("tipo_apuesta", "combinada")
+        
+        if not seleccion_ids_raw:
+            messages.error(request, "Faltan selecciones para la apuesta.")
+            return redirect("catalogo_html")
 
-        if not seleccion_ids_raw or not monto_raw:
-            messages.error(request, "Faltan datos obligatorios para la apuesta.")
-        else:
-            try:
+        try:
+            seleccion_ids = [int(x.strip()) for x in seleccion_ids_raw.split(",") if x.strip()]
+            
+            if len(seleccion_ids) == 0:
+                messages.error(request, "Debes seleccionar al menos una cuota.")
+                return redirect("catalogo_html")
+
+            cuotas_esperadas = {}
+            if cuotas_esperadas_raw:
+                import json
+                cuotas_esperadas = json.loads(cuotas_esperadas_raw)
+
+            if tipo_apuesta == "simples":
+                montos_simples_raw = request.POST.get("montos_simples")
+                if not montos_simples_raw:
+                    messages.error(request, "Faltan los montos para las apuestas simples.")
+                    return redirect("catalogo_html")
+                import json
+                montos_simples = json.loads(montos_simples_raw)
+                
+                exitos = 0
+                errores = []
+                for sid in seleccion_ids:
+                    monto = montos_simples.get(str(sid))
+                    if not monto:
+                        continue
+                    try:
+                        monto_dec = Decimal(str(monto))
+                        cuota_esp = cuotas_esperadas.get(str(sid))
+                        crear_apuesta(request.user, sid, monto_dec, cuota_esperada=cuota_esp)
+                        exitos += 1
+                    except ValidationError as e:
+                        errores.append(str(e.message if hasattr(e, "message") else e))
+                
+                if exitos > 0:
+                    messages.success(request, f"¡{exitos} apuesta(s) simple(s) aceptada(s) con éxito!")
+                for err in errores:
+                    messages.error(request, f"Error en una selección: {err}")
+
+            else:
+                # Es Combinada
+                monto_raw = request.POST.get("monto")
+                if not monto_raw:
+                    messages.error(request, "Falta el monto para la apuesta combinada.")
+                    return redirect("catalogo_html")
+                    
                 monto = Decimal(monto_raw)
-                seleccion_ids = [int(x.strip()) for x in seleccion_ids_raw.split(",") if x.strip()]
-
-                if len(seleccion_ids) == 0:
-                    messages.error(request, "Debes seleccionar al menos una cuota.")
-                elif len(seleccion_ids) == 1:
-                    crear_apuesta(request.user, seleccion_ids[0], monto)
-                    messages.success(request, "¡Tu apuesta ha sido aceptada con éxito!")
+                if len(seleccion_ids) == 1:
+                    crear_apuesta(request.user, seleccion_ids[0], monto, cuota_esperada=cuotas_esperadas.get(str(seleccion_ids[0])))
+                    messages.success(request, "¡Tu apuesta simple ha sido aceptada con éxito!")
                 else:
-                    cuotas_esperadas = {}
-                    if cuotas_esperadas_raw:
-                        import json
-                        cuotas_esperadas = json.loads(cuotas_esperadas_raw)
                     from betting.services import crear_apuesta_combinada
                     crear_apuesta_combinada(request.user, seleccion_ids, monto, cuotas_esperadas=cuotas_esperadas)
                     messages.success(request, "¡Tu apuesta combinada ha sido aceptada con éxito!")
-            except ValidationError as e:
-                detail = str(e.message if hasattr(e, "message") else e)
-                messages.error(request, detail)
-            except Exception:
-                messages.error(request, "Ocurrió un error inesperado al procesar la apuesta.")
+
+        except ValidationError as e:
+            detail = str(e.message if hasattr(e, "message") else e)
+            messages.error(request, detail)
+        except Exception as e:
+            messages.error(request, "Ocurrió un error inesperado al procesar la apuesta.")
 
     return redirect("catalogo_html")
 

@@ -40,6 +40,45 @@ def obtener_seleccion_ganadora_1x2(evento):
         return seleccion_empate
 
 
+def es_seleccion_ganadora(seleccion, evento):
+    """
+    Evalúa si una selección específica resultó ganadora en base al marcador final del evento.
+    Soporta los mercados principales: 1X2, Doble Oportunidad, Más/Menos 2.5, Ambos Equipos Anotan.
+    """
+    goles_loc = evento.goles_local
+    goles_vis = evento.goles_visitante
+    total_goles = goles_loc + goles_vis
+
+    mercado = seleccion.mercado.nombre.upper()
+    sel_nombre = seleccion.nombre.upper()
+
+    if mercado == "1X2":
+        if goles_loc > goles_vis and "LOCAL" in sel_nombre: return True
+        if goles_loc < goles_vis and "VISITANTE" in sel_nombre: return True
+        if goles_loc == goles_vis and "EMPATE" in sel_nombre: return True
+        return False
+
+    elif "DOBLE OPORTUNIDAD" in mercado:
+        if goles_loc >= goles_vis and "1X" in sel_nombre: return True
+        if goles_loc <= goles_vis and "X2" in sel_nombre: return True
+        if goles_loc != goles_vis and "12" in sel_nombre: return True
+        return False
+
+    elif "MÁS/MENOS 2.5" in mercado or "MAS/MENOS 2.5" in mercado:
+        if total_goles > 2.5 and ("MÁS" in sel_nombre or "MAS" in sel_nombre): return True
+        if total_goles < 2.5 and "MENOS" in sel_nombre: return True
+        return False
+
+    elif "AMBOS EQUIPOS ANOTAN" in mercado:
+        anotan_ambos = (goles_loc > 0 and goles_vis > 0)
+        if anotan_ambos and "SÍ" in sel_nombre: return True
+        if anotan_ambos and "SI" in sel_nombre: return True # Fallback sin tilde
+        if not anotan_ambos and "NO" in sel_nombre: return True
+        return False
+
+    return False
+
+
 @transaction.atomic
 def crear_apuesta(user, seleccion_id, monto, cuota_esperada=None):
     monto = Decimal(str(monto))
@@ -142,15 +181,15 @@ def crear_apuesta_combinada(user, seleccion_ids, monto, cuotas_esperadas=None):
     if len(selecciones) != len(seleccion_ids):
         raise ValidationError("Una o más selecciones especificadas no existen.")
 
-    eventos_vistos = set()
+    mercados_vistos = set()
     cuota_acumulada = Decimal("1.0000")
 
     for sel in selecciones:
         # Validación de exclusión mutua
-        evento_id = sel.mercado.evento_id
-        if evento_id in eventos_vistos:
-            raise ValidationError("No se pueden combinar selecciones del mismo partido en un solo ticket.")
-        eventos_vistos.add(evento_id)
+        mercado_id = sel.mercado_id
+        if mercado_id in mercados_vistos:
+            raise ValidationError("No se pueden combinar selecciones del mismo mercado en un solo ticket.")
+        mercados_vistos.add(mercado_id)
 
         # Validar estado del evento
         if sel.mercado.evento.estado not in [EstadoEvento.PROGRAMADO, EstadoEvento.EN_VIVO]:
@@ -315,7 +354,7 @@ def crear_mercados_para_evento(evento):
 
 
 @transaction.atomic
-def liquidar_apuestas_evento(evento_id, seleccion_ganadora_id):
+def liquidar_apuestas_evento(evento_id, seleccion_ganadora_id=None):
     try:
         evento = Evento.objects.get(pk=evento_id)
     except Evento.DoesNotExist:
@@ -324,21 +363,12 @@ def liquidar_apuestas_evento(evento_id, seleccion_ganadora_id):
     if evento.estado == EstadoEvento.FINALIZADO:
         raise ValidationError("Este evento ya ha sido finalizado y liquidado previamente.")
 
-    if seleccion_ganadora_id:
-        try:
-            seleccion_ganadora = Seleccion.objects.get(pk=seleccion_ganadora_id, mercado__evento=evento)
-        except Seleccion.DoesNotExist:
-            raise ValidationError("La selección ganadora especificada no pertenece a este evento.")
-    else:
-        # Si es nula, intentamos calcularla para 1X2 si el estado cambió a FINALIZADO
-        seleccion_ganadora = obtener_seleccion_ganadora_1x2(evento)
-
     # 1. LIQUIDAR APUESTAS SIMPLES
     apuestas_simples = Apuesta.objects.filter(
         tipo="SIMPLE",
         seleccion__mercado__evento=evento,
         estado=EstadoApuesta.ACCEPTED
-    ).select_related("usuario", "seleccion")
+    ).select_related("usuario", "seleccion__mercado")
 
     for apuesta in apuestas_simples:
         user = apuesta.usuario
@@ -353,7 +383,7 @@ def liquidar_apuestas_evento(evento_id, seleccion_ganadora_id):
             apuesta.save()
             continue
 
-        if seleccion_ganadora and apuesta.seleccion == seleccion_ganadora:
+        if es_seleccion_ganadora(apuesta.seleccion, evento):
             payout = stake * apuesta.cuota_fijada
             tid = uuid.uuid4()
             registrar_movimiento(tid, user, TipoCuenta.APUESTAS_PENDIENTES, None, TipoCuenta.CASA, stake)
@@ -397,8 +427,7 @@ def liquidar_apuestas_evento(evento_id, seleccion_ganadora_id):
                 pass
             elif ev_det.estado == EstadoEvento.FINALIZADO:
                 # Calcular ganador
-                ganador_det = obtener_seleccion_ganadora_1x2(ev_det)
-                if ganador_det and det.seleccion == ganador_det:
+                if es_seleccion_ganadora(det.seleccion, ev_det):
                     cuota_ajustada = (cuota_ajustada * det.cuota_fijada).quantize(Decimal("0.0001"))
                 else:
                     estado_final = EstadoApuesta.LOST
@@ -456,64 +485,264 @@ def actualizar_cuota_seleccion(seleccion_id, nueva_cuota):
 
 
 @transaction.atomic
+def recalcular_cuotas_dinamicas(evento):
+    """
+    Recalcula las cuotas de TODOS los mercados del evento basándose en:
+    1. El minuto actual del partido.
+    2. El marcador de goles actual.
+    3. Una leve fluctuación aleatoria para simular la presión/estadísticas del en vivo.
+    Sigue la lógica de casas de apuestas reales (ej. Betano):
+    - Cuota mínima siempre >= 1.01
+    - Mercados resueltos se bloquean permanentemente
+    """
+    import random
+    from decimal import Decimal
+    from betting.models import Mercado, Seleccion
+
+    MIN_CUOTA = Decimal("1.01")
+
+    minuto = max(0, min(evento.minuto_actual, 90))
+    m_factor = Decimal(str(minuto / 90.0))
+    g_local = evento.goles_local
+    g_visitante = evento.goles_visitante
+    g_total = g_local + g_visitante
+    diff = g_local - g_visitante
+
+    # Margen de ganancia de la casa/operador (sobre las cuotas)
+    margen = Decimal("1.08")  # 8% de margen
+
+    def prob_a_cuota(prob):
+        """Convierte probabilidad a cuota decimal con margen de casa. Mínimo 1.01."""
+        if prob <= Decimal("0.0"):
+            return Decimal("99.00")
+        raw = (Decimal("1.0") / (prob * margen)).quantize(Decimal("0.01"))
+        return max(MIN_CUOTA, min(raw, Decimal("99.00")))
+
+    # 1. MERCADO: 1X2
+    mercado_1x2 = evento.mercados.filter(nombre="1X2").first()
+    p_local, p_empate, p_visitante = Decimal("0.33"), Decimal("0.33"), Decimal("0.33")
+    if mercado_1x2:
+        # Probabilidades implícitas base según el marcador y el minuto
+        if diff == 0:
+            # Empate: a más minuto, más probable que se mantenga el empate
+            p_empate = Decimal("0.30") + Decimal("0.55") * m_factor
+            # Añadir pequeña variación aleatoria por posesión/remates (+/- 3%)
+            random_offset = Decimal(str(random.uniform(-0.03, 0.03)))
+            p_local = ((Decimal("1.0") - p_empate) / Decimal("2.0")) + random_offset
+            p_visitante = Decimal("1.0") - p_empate - p_local
+        elif diff > 0:
+            # Local ganando
+            p_local = Decimal("0.50") + Decimal("0.45") * m_factor * Decimal(str(min(diff, 3)))
+            random_offset = Decimal(str(random.uniform(-0.02, 0.02)))
+            p_local += random_offset
+            p_empate = (Decimal("1.0") - p_local) * Decimal("0.70") * (Decimal("1.0") - m_factor)
+            p_visitante = Decimal("1.0") - p_local - p_empate
+        else:
+            # Visitante ganando
+            p_visitante = Decimal("0.50") + Decimal("0.45") * m_factor * Decimal(str(min(-diff, 3)))
+            random_offset = Decimal(str(random.uniform(-0.02, 0.02)))
+            p_visitante += random_offset
+            p_empate = (Decimal("1.0") - p_visitante) * Decimal("0.70") * (Decimal("1.0") - m_factor)
+            p_local = Decimal("1.0") - p_visitante - p_empate
+
+        # Asegurar límites razonables
+        p_local = max(Decimal("0.02"), min(p_local, Decimal("0.96")))
+        p_empate = max(Decimal("0.02"), min(p_empate, Decimal("0.96")))
+        p_visitante = max(Decimal("0.02"), min(p_visitante, Decimal("0.96")))
+
+        # Normalizar probabilidades a 1
+        p_sum = p_local + p_empate + p_visitante
+        p_local /= p_sum
+        p_empate /= p_sum
+        p_visitante /= p_sum
+
+        # Aplicar margen y calcular cuotas
+        c_local = prob_a_cuota(p_local)
+        c_empate = prob_a_cuota(p_empate)
+        c_visitante = prob_a_cuota(p_visitante)
+
+        # Guardar cuotas del 1X2
+        for sel in mercado_1x2.selecciones.all():
+            nombre_lower = sel.nombre.lower()
+            if "local" in nombre_lower:
+                sel.cuota = c_local
+            elif "empate" in nombre_lower:
+                sel.cuota = c_empate
+            elif "visitante" in nombre_lower:
+                sel.cuota = c_visitante
+            sel.save()
+
+    # 2. MERCADO: Doble Oportunidad
+    mercado_doble = evento.mercados.filter(nombre="Doble Oportunidad").first()
+    if mercado_doble:
+        # 1X = Local o Empate
+        p_1X = p_local + p_empate
+        # 12 = Local o Visitante
+        p_12 = p_local + p_visitante
+        # X2 = Empate o Visitante
+        p_X2 = p_empate + p_visitante
+
+        c_1X = prob_a_cuota(p_1X)
+        c_12 = prob_a_cuota(p_12)
+        c_X2 = prob_a_cuota(p_X2)
+
+        for sel in mercado_doble.selecciones.all():
+            if sel.nombre == "1X":
+                sel.cuota = c_1X
+            elif sel.nombre == "12":
+                sel.cuota = c_12
+            elif sel.nombre == "X2":
+                sel.cuota = c_X2
+            sel.save()
+
+    # 3. MERCADO: Más/Menos 2.5
+    mercado_myg = evento.mercados.filter(nombre="Más/Menos 2.5").first()
+    if mercado_myg:
+        if g_total >= 3:
+            c_mas = MIN_CUOTA
+            c_menos = Decimal("99.00")
+            if not mercado_myg.resuelto:
+                mercado_myg.resuelto = True
+                mercado_myg.activo = False
+                mercado_myg.save()
+        else:
+            needed = 3 - g_total
+            # Probabilidad de que se marquen más goles basada en el tiempo restante
+            tiempo_restante = Decimal("1.0") - m_factor
+            if needed == 3:
+                # Faltan 3 goles: probabilidad baja, disminuye con el tiempo
+                p_mas = Decimal("0.45") * tiempo_restante
+            elif needed == 2:
+                # Faltan 2 goles: probabilidad media
+                p_mas = Decimal("0.55") * tiempo_restante
+            else:
+                # Falta 1 gol: probabilidad alta
+                p_mas = Decimal("0.70") * tiempo_restante
+
+            # Un gol más es bastante probable al inicio, pero se reduce con el tiempo
+            p_mas = max(Decimal("0.03"), min(p_mas, Decimal("0.95")))
+            p_menos = Decimal("1.0") - p_mas
+
+            c_mas = prob_a_cuota(p_mas)
+            c_menos = prob_a_cuota(p_menos)
+
+        for sel in mercado_myg.selecciones.all():
+            if "más" in sel.nombre.lower():
+                sel.cuota = c_mas
+            elif "menos" in sel.nombre.lower():
+                sel.cuota = c_menos
+            sel.save()
+
+    # 4. MERCADO: Ambos Equipos Anotan
+    mercado_btts = evento.mercados.filter(nombre="Ambos Equipos Anotan").first()
+    if mercado_btts:
+        if g_local > 0 and g_visitante > 0:
+            c_si = MIN_CUOTA
+            c_no = Decimal("99.00")
+            if not mercado_btts.resuelto:
+                mercado_btts.resuelto = True
+                mercado_btts.activo = False
+                mercado_btts.save()
+        else:
+            tiempo_restante = Decimal("1.0") - m_factor
+            if g_local == 0 and g_visitante == 0:
+                # Ninguno ha anotado: necesitan ambos anotar
+                p_si = Decimal("0.45") * tiempo_restante
+            else:
+                # Uno ya anotó, falta el otro
+                p_si = Decimal("0.50") * tiempo_restante
+
+            p_si = max(Decimal("0.03"), min(p_si, Decimal("0.95")))
+            p_no = Decimal("1.0") - p_si
+
+            c_si = prob_a_cuota(p_si)
+            c_no = prob_a_cuota(p_no)
+
+        for sel in mercado_btts.selecciones.all():
+            if sel.nombre == "Sí":
+                sel.cuota = c_si
+            elif sel.nombre == "No":
+                sel.cuota = c_no
+            sel.save()
+
+    todas_selecciones = Seleccion.objects.filter(mercado__evento=evento)
+    return {str(s.id): str(s.cuota) for s in todas_selecciones}
+
+
+@transaction.atomic
+def liquidar_apuestas_resueltas_temprano(evento):
+    """
+    Liquida apuestas simples y combinadas que ya están matemáticamente garantizadas (ganadas o perdidas)
+    antes de que termine el evento.
+    """
+    goles_loc = evento.goles_local
+    goles_vis = evento.goles_visitante
+    total_goles = goles_loc + goles_vis
+
+    selecciones_ganadas = []
+    selecciones_perdidas = []
+
+    if goles_loc > 0 and goles_vis > 0:
+        selecciones_ganadas.extend(list(Seleccion.objects.filter(mercado__evento=evento, mercado__nombre__icontains="ambos equipos anotan", nombre__in=["Sí", "SI"])))
+        selecciones_perdidas.extend(list(Seleccion.objects.filter(mercado__evento=evento, mercado__nombre__icontains="ambos equipos anotan", nombre__icontains="no")))
+
+    if total_goles >= 3:
+        selecciones_ganadas.extend(list(Seleccion.objects.filter(mercado__evento=evento, mercado__nombre__icontains="2.5", nombre__icontains="más")))
+        selecciones_perdidas.extend(list(Seleccion.objects.filter(mercado__evento=evento, mercado__nombre__icontains="2.5", nombre__icontains="menos")))
+
+    if not selecciones_ganadas and not selecciones_perdidas:
+        return
+
+    # Liquidar Simples
+    for sel in selecciones_ganadas:
+        apuestas = Apuesta.objects.filter(tipo="SIMPLE", seleccion=sel, estado=EstadoApuesta.ACCEPTED).select_related("usuario")
+        for apuesta in apuestas:
+            user = apuesta.usuario
+            stake = apuesta.monto
+            LedgerEntry.objects.select_for_update().filter(usuario=user, cuenta=TipoCuenta.APUESTAS_PENDIENTES)
+            payout = stake * apuesta.cuota_fijada
+            tid = uuid.uuid4()
+            registrar_movimiento(tid, user, TipoCuenta.APUESTAS_PENDIENTES, None, TipoCuenta.CASA, stake)
+            registrar_movimiento(tid, None, TipoCuenta.CASA, user, TipoCuenta.WALLET_USUARIO, payout)
+            apuesta.estado = EstadoApuesta.WON
+            apuesta.save()
+
+    for sel in selecciones_perdidas:
+        apuestas = Apuesta.objects.filter(tipo="SIMPLE", seleccion=sel, estado=EstadoApuesta.ACCEPTED).select_related("usuario")
+        for apuesta in apuestas:
+            user = apuesta.usuario
+            stake = apuesta.monto
+            LedgerEntry.objects.select_for_update().filter(usuario=user, cuenta=TipoCuenta.APUESTAS_PENDIENTES)
+            tid = uuid.uuid4()
+            registrar_movimiento(tid, user, TipoCuenta.APUESTAS_PENDIENTES, None, TipoCuenta.CASA, stake)
+            apuesta.estado = EstadoApuesta.LOST
+            apuesta.save()
+
+    # Liquidar Combinadas que se pierden
+    for sel in selecciones_perdidas:
+        combinadas = Apuesta.objects.filter(tipo="COMBINADA", selecciones=sel, estado=EstadoApuesta.ACCEPTED).distinct()
+        for combinada in combinadas:
+            user = combinada.usuario
+            LedgerEntry.objects.select_for_update().filter(usuario=user, cuenta=TipoCuenta.APUESTAS_PENDIENTES)
+            tid = uuid.uuid4()
+            registrar_movimiento(tid, user, TipoCuenta.APUESTAS_PENDIENTES, None, TipoCuenta.CASA, combinada.monto)
+            combinada.estado = EstadoApuesta.LOST
+            combinada.save()
+
+    # Las combinadas con selecciones ganadas se dejan pendientes hasta que TODAS las selecciones de ese ticket estén resueltas
+    # (esto lo maneja liquidar_apuestas_evento al final)
+
+
+@transaction.atomic
 def recalcular_cuotas_por_goles(evento, goles_local_nuevos, goles_visitante_nuevos):
     if goles_local_nuevos <= 0 and goles_visitante_nuevos <= 0:
         return
 
-    mercado_1x2 = evento.mercados.filter(nombre="1X2").first()
-    if mercado_1x2:
-        seleccion_local = mercado_1x2.selecciones.filter(nombre__icontains="local").first()
-        seleccion_empate = mercado_1x2.selecciones.filter(nombre__icontains="empate").first()
-        seleccion_visitante = mercado_1x2.selecciones.filter(nombre__icontains="visitante").first()
-        
-        # Fallback de seguridad por orden de creación (0: Local, 1: Empate, 2: Visitante)
-        selecciones = list(mercado_1x2.selecciones.all().order_by("id"))
-        if len(selecciones) == 3:
-            if not seleccion_local:
-                seleccion_local = selecciones[0]
-            if not seleccion_empate:
-                seleccion_empate = selecciones[1]
-            if not seleccion_visitante:
-                seleccion_visitante = selecciones[2]
-        
-        if seleccion_local and seleccion_empate and seleccion_visitante:
-            o_local = Decimal(str(seleccion_local.cuota))
-            o_empate = Decimal(str(seleccion_empate.cuota))
-            o_visitante = Decimal(str(seleccion_visitante.cuota))
-            
-            # Convertir a probabilidades implícitas
-            p_local = Decimal("1.0000") / o_local
-            p_empate = Decimal("1.0000") / o_empate
-            p_visitante = Decimal("1.0000") / o_visitante
-            
-            # Modificar probabilidades según la cantidad de goles nuevos
-            p_local += Decimal("0.2000") * Decimal(str(goles_local_nuevos))
-            p_visitante -= Decimal("0.1500") * Decimal(str(goles_local_nuevos))
-            p_empate -= Decimal("0.0500") * Decimal(str(goles_local_nuevos))
-            
-            p_visitante += Decimal("0.2000") * Decimal(str(goles_visitante_nuevos))
-            p_local -= Decimal("0.1500") * Decimal(str(goles_visitante_nuevos))
-            p_empate -= Decimal("0.0500") * Decimal(str(goles_visitante_nuevos))
-            
-            # Limitar probabilidades para evitar cuotas negativas o absurdas
-            p_local = max(Decimal("0.0200"), min(p_local, Decimal("0.9500")))
-            p_visitante = max(Decimal("0.0200"), min(p_visitante, Decimal("0.9500")))
-            p_empate = max(Decimal("0.0200"), min(p_empate, Decimal("0.9500")))
-            
-            # Recalcular nuevas cuotas
-            nueva_c_local = (Decimal("1.0000") / p_local).quantize(Decimal("0.01"))
-            nueva_c_empate = (Decimal("1.0000") / p_empate).quantize(Decimal("0.01"))
-            nueva_c_visitante = (Decimal("1.0000") / p_visitante).quantize(Decimal("0.01"))
-            
-            # Actualizar cuotas y guardar (usar mínimo 1.01)
-            seleccion_local.cuota = max(Decimal("1.0100"), nueva_c_local)
-            seleccion_local.save()
-            
-            seleccion_empate.cuota = max(Decimal("1.0100"), nueva_c_empate)
-            seleccion_empate.save()
-            
-            seleccion_visitante.cuota = max(Decimal("1.0100"), nueva_c_visitante)
-            seleccion_visitante.save()
+    # Liquidación temprana
+    liquidar_apuestas_resueltas_temprano(evento)
+
+    # Recalcular usando la nueva lógica general
+    cuotas_data = recalcular_cuotas_dinamicas(evento)
 
     # Suspender temporalmente mercados
     Mercado.objects.filter(evento=evento).update(activo=False)
@@ -521,13 +750,6 @@ def recalcular_cuotas_por_goles(evento, goles_local_nuevos, goles_visitante_nuev
     # Transmitir suspensión a WebSockets
     channel_layer = get_channel_layer()
     if channel_layer:
-        # Obtener cuotas actualizadas para enviar en la transmisión
-        mercado_1x2 = evento.mercados.filter(nombre="1X2").first()
-        cuotas_data = {}
-        if mercado_1x2:
-            for s in mercado_1x2.selecciones.all():
-                cuotas_data[s.id] = str(s.cuota)
-
         async_to_sync(channel_layer.group_send)(
             "live_odds",
             {

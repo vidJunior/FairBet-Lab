@@ -11,7 +11,7 @@ def reactivar_mercados_evento(evento_id):
     time.sleep(15)
     
     with transaction.atomic():
-        Mercado.objects.filter(evento_id=evento_id).update(activo=True)
+        Mercado.objects.filter(evento_id=evento_id, resuelto=False).update(activo=True)
         
     channel_layer = get_channel_layer()
     if channel_layer:
@@ -127,8 +127,16 @@ def simular_minuto_partidos_en_vivo():
                 partido.goles_visitante += 1
                 goles_vis_nuevos = 1
                 
-            # el save recalcula cuotas
+            # Guardar el estado del partido
             partido.save()
+
+            # Recalcular todas las cuotas de forma dinámica según el minuto actual y goles
+            from betting.services import recalcular_cuotas_dinamicas, liquidar_apuestas_resueltas_temprano
+            nuevas_cuotas = recalcular_cuotas_dinamicas(partido)
+
+            # Liquidar automáticamente apuestas ya resueltas matemáticamente
+            # (ej: "Ambos Anotan Sí" cuando ambos ya anotaron, "Más de 2.5" con 3+ goles)
+            liquidar_apuestas_resueltas_temprano(partido)
             
             channel_layer = get_channel_layer()
             if channel_layer:
@@ -144,7 +152,10 @@ def simular_minuto_partidos_en_vivo():
                             "periodo": partido.periodo,
                             "periodo_display": periodo_display,
                             "goles_local": partido.goles_local,
-                            "goles_visitante": partido.goles_visitante
+                            "goles_visitante": partido.goles_visitante,
+                            "nuevas_cuotas": nuevas_cuotas
                         }
                     }
                 )
+
+

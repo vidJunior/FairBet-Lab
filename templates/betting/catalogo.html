@@ -131,7 +131,9 @@
                 <div class="border-t border-slate-100 pt-4" id="mercado-{{ mercado.id }}">
                   <div class="flex justify-between items-center mb-3">
                     <span class="text-[10px] font-black text-slate-400 uppercase tracking-widest bg-slate-50 px-2 py-1 rounded-md">{{ mercado.nombre }}</span>
-                    {% if not mercado.activo %}
+                    {% if mercado.resuelto %}
+                      <span id="suspendido-text-{{ mercado.id }}" class="text-[9px] font-black text-white bg-emerald-600 px-2 py-0.5 rounded-md uppercase tracking-widest flex items-center gap-1">🔒 Resuelto</span>
+                    {% elif not mercado.activo %}
                       <span id="suspendido-text-{{ mercado.id }}" class="text-[9px] font-black text-white bg-rose-500 px-2 py-0.5 rounded-md uppercase tracking-widest animate-pulse">Suspendido</span>
                     {% endif %}
                   </div>
@@ -141,7 +143,7 @@
                         type="button" 
                         id="btn-seleccion-{{ seleccion.id }}"
                         {% if not mercado.activo %}disabled{% endif %}
-                        onclick="seleccionarCuota('{{ seleccion.id }}', '{{ seleccion.nombre }}', '{{ seleccion.cuota|stringformat:".2f" }}', '{{ evento.local }} vs {{ evento.visitante }}')"
+                        onclick="seleccionarCuota('{{ seleccion.id }}', '{{ seleccion.nombre }}', '{{ seleccion.cuota|stringformat:".2f" }}', '{{ evento.local }} vs {{ evento.visitante }}', '{{ mercado.id }}')"
                         class="border px-3 py-3.5 rounded-2xl transition-all duration-200 text-center flex flex-col justify-center items-center group shadow-2xs hover:shadow-sm
                           {% if not mercado.activo %}
                             opacity-50 cursor-not-allowed bg-slate-100 border-slate-200
@@ -171,7 +173,9 @@
                   <div class="border-t border-slate-100 pt-4" id="mercado-{{ mercado.id }}">
                     <div class="flex justify-between items-center mb-3">
                       <span class="text-[10px] font-black text-slate-400 uppercase tracking-widest bg-slate-50 px-2 py-1 rounded-md">{{ mercado.nombre }}</span>
-                      {% if not mercado.activo %}
+                      {% if mercado.resuelto %}
+                        <span id="suspendido-text-{{ mercado.id }}" class="text-[9px] font-black text-white bg-emerald-600 px-2 py-0.5 rounded-md uppercase tracking-widest flex items-center gap-1">🔒 Resuelto</span>
+                      {% elif not mercado.activo %}
                         <span id="suspendido-text-{{ mercado.id }}" class="text-[9px] font-black text-white bg-rose-500 px-2 py-0.5 rounded-md uppercase tracking-widest animate-pulse">Suspendido</span>
                       {% endif %}
                     </div>
@@ -181,7 +185,7 @@
                           type="button" 
                           id="btn-seleccion-{{ seleccion.id }}"
                           {% if not mercado.activo %}disabled{% endif %}
-                          onclick="seleccionarCuota('{{ seleccion.id }}', '{{ seleccion.nombre }}', '{{ seleccion.cuota|stringformat:".2f" }}', '{{ evento.local }} vs {{ evento.visitante }}')"
+                          onclick="seleccionarCuota('{{ seleccion.id }}', '{{ seleccion.nombre }}', '{{ seleccion.cuota|stringformat:".2f" }}', '{{ evento.local }} vs {{ evento.visitante }}', '{{ mercado.id }}')"
                           class="border px-3 py-3.5 rounded-2xl transition-all duration-200 text-center flex flex-col justify-center items-center group shadow-2xs hover:shadow-sm
                             {% if not mercado.activo %}
                               opacity-50 cursor-not-allowed bg-slate-100 border-slate-200
@@ -225,7 +229,7 @@
                   </div>
                   <span class="text-indigo-900 font-black tracking-wide text-sm">{{ evento.fecha_inicio|date:"l, d M Y" }}</span>
                   <span class="text-slate-400 font-medium">a las</span>
-                  <span class="text-indigo-600 font-bold bg-indigo-50 px-2 py-0.5 rounded-md">{{ evento.fecha_inicio|date:"H:i" }}</span>
+                  <span class="text-indigo-600 font-bold bg-indigo-50 px-2 py-0.5 rounded-md">{{ evento.fecha_inicio|date:"h:i A"|upper|cut:"." }}</span>
                 </div>
                 <span id="evento-badge-{{ evento.id }}" class="px-3 py-1 rounded-full uppercase tracking-wider text-[10px] font-extrabold shadow-sm bg-slate-50 text-slate-500 border border-slate-100">
                   {{ evento.get_estado_display }}
@@ -246,18 +250,29 @@
 
               <!-- 1X2 siempre visible -->
               {% for mercado in evento.mercados.all %}
-                {% if mercado.nombre == "1X2" and mercado.activo %}
-                  <div class="border-t border-slate-100 pt-4">
-                    <div class="flex items-center gap-1.5 mb-3">
+                {% if mercado.nombre == "1X2" %}
+                  <div class="border-t border-slate-100 pt-4" id="mercado-{{ mercado.id }}">
+                    <div class="flex justify-between items-center mb-3">
                       <span class="text-[10px] font-black text-slate-400 uppercase tracking-widest bg-slate-50 px-2 py-1 rounded-md">{{ mercado.nombre }}</span>
+                      {% if mercado.resuelto %}
+                        <span id="suspendido-text-{{ mercado.id }}" class="text-[9px] font-black text-white bg-emerald-600 px-2 py-0.5 rounded-md uppercase tracking-widest flex items-center gap-1">🔒 Resuelto</span>
+                      {% elif not mercado.activo %}
+                        <span id="suspendido-text-{{ mercado.id }}" class="text-[9px] font-black text-white bg-rose-500 px-2 py-0.5 rounded-md uppercase tracking-widest animate-pulse">Suspendido</span>
+                      {% endif %}
                     </div>
                     <div class="grid grid-cols-3 gap-3">
                       {% for seleccion in mercado.selecciones.all %}
                         <button 
                           type="button" 
                           id="btn-seleccion-{{ seleccion.id }}"
-                          onclick="seleccionarCuota('{{ seleccion.id }}', '{{ seleccion.nombre }}', '{{ seleccion.cuota|stringformat:".2f" }}', '{{ evento.local }} vs {{ evento.visitante }}')"
-                          class="bg-white border border-slate-200/60 hover:border-indigo-500 hover:bg-indigo-50/30 px-3 py-3.5 rounded-2xl transition-all duration-200 text-center flex flex-col justify-center items-center group shadow-2xs hover:shadow-sm active:scale-95">
+                          {% if not mercado.activo %}disabled{% endif %}
+                          onclick="seleccionarCuota('{{ seleccion.id }}', '{{ seleccion.nombre }}', '{{ seleccion.cuota|stringformat:".2f" }}', '{{ evento.local }} vs {{ evento.visitante }}', '{{ mercado.id }}')"
+                          class="border px-3 py-3.5 rounded-2xl transition-all duration-200 text-center flex flex-col justify-center items-center group shadow-2xs hover:shadow-sm
+                            {% if not mercado.activo %}
+                              opacity-50 cursor-not-allowed bg-slate-100 border-slate-200
+                            {% else %}
+                              bg-white border-slate-200/60 hover:border-indigo-500 hover:bg-indigo-50/30 active:scale-95
+                            {% endif %}">
                           <span class="text-[10px] text-slate-500 font-bold group-hover:text-indigo-600 transition-colors uppercase tracking-widest mb-1">{{ seleccion.nombre }}</span>
                           <span id="cuota-val-{{ seleccion.id }}" class="text-lg font-black text-slate-800 group-hover:text-indigo-700 transition-colors font-mono tracking-tight">{{ seleccion.cuota|stringformat:".2f" }}</span>
                         </button>
@@ -277,18 +292,29 @@
               <!-- Mercados adicionales colapsables -->
               <div class="mercados-adicionales hidden">
                 {% for mercado in evento.mercados.all %}
-                  {% if mercado.nombre != "1X2" and mercado.activo %}
-                    <div class="border-t border-slate-100 pt-4">
-                      <div class="flex items-center gap-1.5 mb-3">
+                  {% if mercado.nombre != "1X2" %}
+                    <div class="border-t border-slate-100 pt-4" id="mercado-{{ mercado.id }}">
+                      <div class="flex justify-between items-center mb-3">
                         <span class="text-[10px] font-black text-slate-400 uppercase tracking-widest bg-slate-50 px-2 py-1 rounded-md">{{ mercado.nombre }}</span>
+                        {% if mercado.resuelto %}
+                          <span id="suspendido-text-{{ mercado.id }}" class="text-[9px] font-black text-white bg-emerald-600 px-2 py-0.5 rounded-md uppercase tracking-widest flex items-center gap-1">🔒 Resuelto</span>
+                        {% elif not mercado.activo %}
+                          <span id="suspendido-text-{{ mercado.id }}" class="text-[9px] font-black text-white bg-rose-500 px-2 py-0.5 rounded-md uppercase tracking-widest animate-pulse">Suspendido</span>
+                        {% endif %}
                       </div>
                       <div class="grid grid-cols-3 gap-3">
                         {% for seleccion in mercado.selecciones.all %}
                           <button 
                             type="button" 
                             id="btn-seleccion-{{ seleccion.id }}"
-                            onclick="seleccionarCuota('{{ seleccion.id }}', '{{ seleccion.nombre }}', '{{ seleccion.cuota|stringformat:".2f" }}', '{{ evento.local }} vs {{ evento.visitante }}')"
-                            class="bg-white border border-slate-200/60 hover:border-indigo-500 hover:bg-indigo-50/30 px-3 py-3.5 rounded-2xl transition-all duration-200 text-center flex flex-col justify-center items-center group shadow-2xs hover:shadow-sm active:scale-95">
+                            {% if not mercado.activo %}disabled{% endif %}
+                            onclick="seleccionarCuota('{{ seleccion.id }}', '{{ seleccion.nombre }}', '{{ seleccion.cuota|stringformat:".2f" }}', '{{ evento.local }} vs {{ evento.visitante }}', '{{ mercado.id }}')"
+                            class="border px-3 py-3.5 rounded-2xl transition-all duration-200 text-center flex flex-col justify-center items-center group shadow-2xs hover:shadow-sm
+                              {% if not mercado.activo %}
+                                opacity-50 cursor-not-allowed bg-slate-100 border-slate-200
+                              {% else %}
+                                bg-white border-slate-200/60 hover:border-indigo-500 hover:bg-indigo-50/30 active:scale-95
+                              {% endif %}">
                             <span class="text-[10px] text-slate-500 font-bold group-hover:text-indigo-600 transition-colors uppercase tracking-widest mb-1">{{ seleccion.nombre }}</span>
                             <span id="cuota-val-{{ seleccion.id }}" class="text-lg font-black text-slate-800 group-hover:text-indigo-700 transition-colors font-mono tracking-tight">{{ seleccion.cuota|stringformat:".2f" }}</span>
                           </button>
@@ -428,8 +454,16 @@
           <span>Boleto de Apuesta</span>
         </h3>
 
+        <!-- Tabs de Modo de Apuesta -->
+        <div class="flex bg-slate-100 p-1.5 rounded-xl mb-3 gap-1">
+          <button type="button" onclick="cambiarModoBoleto('simples')" id="tab-boleto-simples" class="flex-1 py-1.5 text-[11px] font-black uppercase tracking-wider rounded-lg transition-all text-center bg-white text-indigo-700 shadow-sm border border-slate-200/40">Simples</button>
+          <button type="button" onclick="cambiarModoBoleto('combinada')" id="tab-boleto-combinadas" class="flex-1 py-1.5 text-[11px] font-black uppercase tracking-wider rounded-lg transition-all text-center text-slate-500 hover:text-slate-700 hover:bg-slate-200/50">Combinadas</button>
+        </div>
+        
+        <p class="text-xs text-slate-400 text-center mb-4 flex items-center justify-center gap-1.5"><i data-lucide="trash-2" class="w-3.5 h-3.5"></i> Haz clic en la papelera para borrar una apuesta!</p>
+
         <!-- Contenedor vacío -->
-        <div id="boleto-vacio" class="text-center py-12 text-slate-400">
+        <div id="boleto-vacio" class="text-center py-8 text-slate-400">
           <div class="p-4 bg-slate-50 rounded-full w-fit mx-auto mb-4 border border-slate-100 text-slate-300">
             <i data-lucide="mouse-pointer-click" class="w-8 h-8"></i>
           </div>
@@ -438,68 +472,48 @@
         </div>
 
         <!-- Formulario -->
-        <form id="form-apuesta" action="{% url 'apostar_html' %}" method="POST" class="hidden space-y-5 pt-4">
+        <form id="form-apuesta" action="{% url 'apostar_html' %}" method="POST" class="hidden space-y-4">
           {% csrf_token %}
-
-          <!-- Contenedor de selecciones múltiples -->
-          <div id="boleto-selecciones" class="space-y-3"></div>
-
-          <!-- Inputs ocultos -->
           <input type="hidden" id="input-seleccion-ids" name="seleccion_ids">
           <input type="hidden" id="input-cuotas-esperadas" name="cuotas_esperadas">
+          <input type="hidden" id="input-tipo-apuesta" name="tipo_apuesta" value="simples">
+          <input type="hidden" id="input-montos-simples" name="montos_simples">
 
-          <!-- Input de Monto -->
-          <div class="space-y-3">
-            <div class="flex justify-between items-end">
-              <label for="input-monto" class="text-[10px] font-black text-slate-500 uppercase tracking-widest block">Inversión (fichas)</label>
-              <button type="button" class="text-[10px] text-indigo-600 font-black uppercase tracking-wider bg-indigo-50 px-2 py-1 rounded-md hover:bg-indigo-100 transition-colors" onclick="usarMaximo({{ saldo|unlocalize }})">MAX</button>
-            </div>
-            <div class="relative">
-              <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                <span class="text-slate-400 font-bold">f.</span>
-              </div>
-              <input 
-                type="number" 
-                step="0.5" 
-                min="0.5" 
-                max="5000"
-                id="input-monto" 
-                name="monto" 
-                required
-                oninput="calcularRetorno()"
-                placeholder="0.00"
-                class="w-full bg-white border-2 border-slate-200 focus:border-indigo-500 focus:ring-0 rounded-2xl py-3.5 pl-9 pr-4 text-lg font-black text-slate-800 outline-none transition-all placeholder-slate-300 shadow-sm">
-            </div>
+          <!-- Contenedor de selecciones dinámico -->
+          <div id="boleto-selecciones" class="space-y-3 max-h-[380px] overflow-y-auto pr-1 custom-scrollbar"></div>
 
-            <!-- Botones rápidos -->
-            <div class="grid grid-cols-4 gap-2">
-              <button type="button" onclick="sumarMonto(10)" class="bg-white hover:bg-indigo-50 border border-slate-200 hover:border-indigo-200 rounded-xl py-2 text-xs font-black text-slate-600 hover:text-indigo-700 transition-all shadow-sm active:scale-95">+10</button>
-              <button type="button" onclick="sumarMonto(50)" class="bg-white hover:bg-indigo-50 border border-slate-200 hover:border-indigo-200 rounded-xl py-2 text-xs font-black text-slate-600 hover:text-indigo-700 transition-all shadow-sm active:scale-95">+50</button>
-              <button type="button" onclick="sumarMonto(100)" class="bg-white hover:bg-indigo-50 border border-slate-200 hover:border-indigo-200 rounded-xl py-2 text-xs font-black text-slate-600 hover:text-indigo-700 transition-all shadow-sm active:scale-95">+100</button>
-              <button type="button" onclick="limpiarMonto()" class="bg-white hover:bg-rose-50 border border-slate-200 hover:border-rose-200 rounded-xl py-2 text-xs font-black text-slate-400 hover:text-rose-600 transition-all shadow-sm active:scale-95"><i data-lucide="eraser" class="w-4 h-4 mx-auto"></i></button>
-            </div>
-          </div>
-
-          <!-- Cuota Acumulada -->
-          <div class="bg-indigo-50 border border-indigo-100 rounded-2xl p-3 flex items-center justify-between">
-            <span class="text-[10px] font-black text-indigo-600 uppercase tracking-widest">Cuota Combinada</span>
-            <span id="boleto-cuota-acumulada" class="font-mono font-black text-indigo-700 text-xl">0.00</span>
+          <!-- Input Global (Solo visible en Combinadas) -->
+          <div id="boleto-input-combinada" class="hidden space-y-3 border-t border-slate-100 pt-3">
+             <div class="flex justify-between items-end">
+               <label class="text-[10px] font-black text-slate-500 uppercase tracking-widest block">Inversión Combinada</label>
+               <button type="button" class="text-[10px] text-indigo-600 font-black uppercase tracking-wider bg-indigo-50 px-2 py-1 rounded-md hover:bg-indigo-100 transition-colors" onclick="usarMaximoGlobal({{ saldo|unlocalize }})">MAX</button>
+             </div>
+             <div class="relative">
+               <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none"><span class="text-slate-400 font-bold">f.</span></div>
+               <input type="number" step="0.5" min="0.5" id="input-monto-global" name="monto" oninput="calcularRetorno()" placeholder="0.00" class="w-full bg-white border-2 border-slate-200 focus:border-indigo-500 focus:ring-0 rounded-xl py-2 pl-9 pr-4 text-lg font-black text-slate-800 outline-none transition-all shadow-sm">
+             </div>
+             
+             <!-- Cuota Acumulada -->
+             <div class="bg-indigo-50 border border-indigo-100 rounded-xl p-3 flex items-center justify-between">
+               <span class="text-[10px] font-black text-indigo-600 uppercase tracking-widest">Cuota Total</span>
+               <span id="boleto-cuota-acumulada" class="font-mono font-black text-indigo-700 text-lg">0.00</span>
+             </div>
           </div>
 
           <!-- Retorno Potencial -->
-          <div class="bg-slate-900 rounded-2xl p-4 flex items-center justify-between shadow-lg">
-            <span class="text-white/60 font-black uppercase tracking-widest text-[10px]">Retorno Estimado</span>
-            <span id="retorno-potencial" class="font-black text-emerald-400 text-xl font-mono">0.00</span>
+          <div class="bg-[#191e24] rounded-xl p-4 flex items-center justify-between shadow-lg">
+            <span class="text-white/60 font-black uppercase tracking-widest text-[10px]" id="texto-retorno">Ganancias Potenciales</span>
+            <span id="retorno-potencial" class="font-black text-[#00e676] text-xl font-mono">f. 0.00</span>
           </div>
 
-          <!-- Submit -->
+          <!-- Botón Apostar (estilo Betano verde) -->
           <button 
             type="submit" 
             disabled
             id="btn-apostar"
-            class="w-full bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 disabled:from-slate-300 disabled:to-slate-300 disabled:cursor-not-allowed text-white font-black py-4 rounded-2xl shadow-xl shadow-indigo-200 transition-all duration-200 text-sm flex items-center justify-center gap-2 active:scale-95">
-            <span>Apostar Ahora</span>
-            <i data-lucide="arrow-right-circle" class="w-5 h-5"></i>
+            onclick="prepararSubmit(event)"
+            class="w-full bg-[#34a853] hover:bg-[#2e964a] disabled:bg-slate-300 disabled:cursor-not-allowed text-white font-black py-4 rounded-xl shadow-lg transition-all duration-200 text-sm flex items-center justify-center gap-2 uppercase tracking-widest">
+            <span>Apuesta</span>
           </button>
         </form>
       </div>
@@ -576,13 +590,39 @@
               {% if apuesta.tipo == 'COMBINADA' %}
                 <div class="hidden space-y-2 mb-3" data-detalles-apuesta>
                   {% for det in apuesta.detalles.all %}
-                    <div class="bg-slate-50 rounded-xl px-3 py-2 border border-slate-100">
+                    <div class="rounded-xl px-3 py-2 border transition-all
+                      {% if det.seleccion.mercado.evento.estado == 'finalizado' %}
+                        {% if det.es_ganadora %}bg-emerald-50/50 border-emerald-200 shadow-sm
+                        {% else %}bg-rose-50/50 border-rose-200 shadow-sm opacity-80{% endif %}
+                      {% else %}bg-slate-50 border-slate-100 hover:border-indigo-200{% endif %}">
                       <div class="flex justify-between items-center">
                         <div class="min-w-0 flex-1 mr-2">
-                          <span class="text-[10px] font-black text-slate-400 uppercase tracking-widest block truncate">{{ det.seleccion.mercado.evento.local }} vs {{ det.seleccion.mercado.evento.visitante }}</span>
-                          <span class="text-xs font-bold text-slate-700 block truncate">{{ det.seleccion.nombre }}</span>
+                          <span class="text-[10px] font-black uppercase tracking-widest block truncate
+                            {% if det.seleccion.mercado.evento.estado == 'finalizado' %}
+                              {% if det.es_ganadora %}text-emerald-600/70{% else %}text-rose-500/70{% endif %}
+                            {% else %}text-slate-400{% endif %}">{{ det.seleccion.mercado.evento.local }} vs {{ det.seleccion.mercado.evento.visitante }}</span>
+                          <span class="text-xs font-bold block truncate
+                            {% if det.seleccion.mercado.evento.estado == 'finalizado' %}
+                              {% if det.es_ganadora %}text-emerald-900{% else %}text-rose-900 line-through decoration-rose-300{% endif %}
+                            {% else %}text-slate-700{% endif %}">{{ det.seleccion.nombre }}</span>
                         </div>
-                        <span class="font-mono font-black text-indigo-700 text-xs whitespace-nowrap">@{{ det.cuota_fijada|stringformat:".2f" }}</span>
+                        <div class="flex items-center gap-1.5 whitespace-nowrap ml-2">
+                          <span class="font-mono font-black text-xs
+                            {% if det.seleccion.mercado.evento.estado == 'finalizado' %}
+                              {% if det.es_ganadora %}text-emerald-700{% else %}text-rose-600{% endif %}
+                            {% else %}text-indigo-700{% endif %}">@{{ det.cuota_fijada|stringformat:".2f" }}</span>
+                          {% if det.seleccion.mercado.evento.estado == 'finalizado' %}
+                            {% if det.es_ganadora %}
+                              <span class="bg-emerald-500 text-white p-0.5 rounded-full shadow-sm" title="Ganada">
+                                <i data-lucide="check" class="w-3.5 h-3.5"></i>
+                              </span>
+                            {% else %}
+                              <span class="bg-rose-500 text-white p-0.5 rounded-full shadow-sm" title="Perdida">
+                                <i data-lucide="x" class="w-3.5 h-3.5"></i>
+                              </span>
+                            {% endif %}
+                          {% endif %}
+                        </div>
                       </div>
                     </div>
                   {% endfor %}
@@ -648,9 +688,7 @@
                 </span>
                 <div class="flex items-center gap-1">
                   <span class="font-black px-2 py-0.5 rounded-md text-[9px] uppercase tracking-widest
-                    {% if apuesta.tipo == 'COMBINADA' %}
-                      bg-purple-200 text-purple-800
-                    {% elif apuesta.estado == 'won' %}
+                    {% if apuesta.estado == 'won' %}
                       bg-emerald-500 text-white
                     {% elif apuesta.estado == 'lost' %}
                       bg-rose-500 text-white
@@ -659,9 +697,7 @@
                     {% else %}
                       bg-slate-500 text-white
                     {% endif %}">
-                    {% if apuesta.tipo == 'COMBINADA' %}
-                      COMBINADA
-                    {% elif apuesta.estado == 'won' %}GANADA{% elif apuesta.estado == 'lost' %}PERDIDA{% elif apuesta.estado == 'cashed_out' %}RETIRADA{% else %}ANULADA{% endif %}
+                    {% if apuesta.tipo == 'COMBINADA' %}COMBINADA - {% endif %}{% if apuesta.estado == 'won' %}GANADA{% elif apuesta.estado == 'lost' %}PERDIDA{% elif apuesta.estado == 'cashed_out' %}RETIRADA{% else %}ANULADA{% endif %}
                   </span>
                   {% if apuesta.tipo == 'COMBINADA' %}
                     <button type="button" onclick="toggleDetallesApuesta(this)" class="p-1 text-slate-400 hover:text-indigo-600 transition-colors">
@@ -672,15 +708,41 @@
               </div>
 
               {% if apuesta.tipo == 'COMBINADA' %}
-                <div class="hidden space-y-2 mb-3" data-detalles-apuesta>
+                <div class="space-y-2 mb-3" data-detalles-apuesta>
                   {% for det in apuesta.detalles.all %}
-                    <div class="bg-slate-50 rounded-xl px-3 py-2 border border-slate-100">
+                    <div class="rounded-xl px-3 py-2 border transition-all
+                      {% if det.seleccion.mercado.evento.estado == 'finalizado' %}
+                        {% if det.es_ganadora %}bg-emerald-50/50 border-emerald-200 shadow-sm
+                        {% else %}bg-rose-50/50 border-rose-200 shadow-sm opacity-80{% endif %}
+                      {% else %}bg-slate-50 border-slate-100 hover:border-indigo-200{% endif %}">
                       <div class="flex justify-between items-center">
                         <div class="min-w-0 flex-1 mr-2">
-                          <span class="text-[10px] font-black text-slate-400 uppercase tracking-widest block truncate">{{ det.seleccion.mercado.evento.local }} vs {{ det.seleccion.mercado.evento.visitante }}</span>
-                          <span class="text-xs font-bold text-slate-700 block truncate">{{ det.seleccion.nombre }}</span>
+                          <span class="text-[10px] font-black uppercase tracking-widest block truncate
+                            {% if det.seleccion.mercado.evento.estado == 'finalizado' %}
+                              {% if det.es_ganadora %}text-emerald-600/70{% else %}text-rose-500/70{% endif %}
+                            {% else %}text-slate-400{% endif %}">{{ det.seleccion.mercado.evento.local }} vs {{ det.seleccion.mercado.evento.visitante }}</span>
+                          <span class="text-xs font-bold block truncate
+                            {% if det.seleccion.mercado.evento.estado == 'finalizado' %}
+                              {% if det.es_ganadora %}text-emerald-900{% else %}text-rose-900 line-through decoration-rose-300{% endif %}
+                            {% else %}text-slate-700{% endif %}">{{ det.seleccion.nombre }}</span>
                         </div>
-                        <span class="font-mono font-black text-indigo-700 text-xs whitespace-nowrap">@{{ det.cuota_fijada|stringformat:".2f" }}</span>
+                        <div class="flex items-center gap-1.5 whitespace-nowrap ml-2">
+                          <span class="font-mono font-black text-xs
+                            {% if det.seleccion.mercado.evento.estado == 'finalizado' %}
+                              {% if det.es_ganadora %}text-emerald-700{% else %}text-rose-600{% endif %}
+                            {% else %}text-indigo-700{% endif %}">@{{ det.cuota_fijada|stringformat:".2f" }}</span>
+                          {% if det.seleccion.mercado.evento.estado == 'finalizado' %}
+                            {% if det.es_ganadora %}
+                              <span class="bg-emerald-500 text-white p-0.5 rounded-full shadow-sm" title="Ganada">
+                                <i data-lucide="check" class="w-3.5 h-3.5"></i>
+                              </span>
+                            {% else %}
+                              <span class="bg-rose-500 text-white p-0.5 rounded-full shadow-sm" title="Perdida">
+                                <i data-lucide="x" class="w-3.5 h-3.5"></i>
+                              </span>
+                            {% endif %}
+                          {% endif %}
+                        </div>
                       </div>
                     </div>
                   {% endfor %}
@@ -695,18 +757,20 @@
                     {{ apuesta.seleccion.nombre }}
                   {% endif %}
                 </span>
-                <span class="font-mono text-slate-600">@{{ apuesta.cuota_fijada|stringformat:".2f" }}</span>
+                <div class="flex items-center gap-1.5">
+                  <span class="font-mono text-slate-600">@{{ apuesta.cuota_fijada|stringformat:".2f" }}</span>
+                  {% if apuesta.estado == 'won' %}
+                    <span class="bg-emerald-100 text-emerald-800 p-0.5 rounded-full" title="Ganada">
+                      <i data-lucide="check" class="w-3 h-3"></i>
+                    </span>
+                  {% elif apuesta.estado == 'lost' %}
+                    <span class="bg-rose-100 text-rose-800 p-0.5 rounded-full" title="Perdida">
+                      <i data-lucide="x" class="w-3 h-3"></i>
+                    </span>
+                  {% endif %}
+                </div>
               </div>
-              <div class="flex justify-between p-2 rounded-xl text-[10px] font-bold
-                {% if apuesta.estado == 'won' %}
-                  bg-emerald-100/50 text-emerald-800
-                {% elif apuesta.estado == 'lost' %}
-                  bg-rose-100/50 text-rose-800
-                {% elif apuesta.estado == 'cashed_out' %}
-                  bg-blue-100/50 text-blue-800
-                {% else %}
-                  bg-slate-200/50 text-slate-700
-                {% endif %}">
+              <div class="flex justify-between p-2 rounded-xl text-[10px] font-bold {% if apuesta.estado == 'won' %}bg-emerald-100/50 text-emerald-800{% elif apuesta.estado == 'lost' %}bg-rose-100/50 text-rose-800{% elif apuesta.estado == 'cashed_out' %}bg-blue-100/50 text-blue-800{% else %}bg-slate-200/50 text-slate-700{% endif %}">
                 <span>Inversión: f. {{ apuesta.monto|stringformat:".2f" }}</span>
                 <span>
                   {% if apuesta.estado == 'won' %}
@@ -822,17 +886,21 @@
         if (btn) {
           const oldOnclick = btn.getAttribute("onclick");
           if (oldOnclick) {
-            const match = oldOnclick.match(/seleccionarCuota\('([^']*)',\s*'([^']*)',\s*'([^']*)',\s*'([^']*)'\)/);
+            const match = oldOnclick.match(/seleccionarCuota\('([^']*)',\s*'([^']*)',\s*'([^']*)',\s*'([^']*)',\s*'([^']*)'\)/);
             if (match) {
-              btn.setAttribute("onclick", `seleccionarCuota('${match[1]}', '${match[2]}', '${parseFloat(nuevaCuota).toFixed(2)}', '${match[4]}')`);
+              btn.setAttribute("onclick", `seleccionarCuota('${match[1]}', '${match[2]}', '${parseFloat(nuevaCuota).toFixed(2)}', '${match[4]}', '${match[5]}')`);
             }
           }
         }
-
-        const inputSeleccionId = document.getElementById("input-seleccion-id").value;
-        if (inputSeleccionId === selId) {
-          document.getElementById("boleto-cuota").innerText = parseFloat(nuevaCuota).toFixed(2);
-          calcularRetorno();
+        // Actualizar cuota en tiempo real en la lista de selecciones activas en memoria si está en el ticket
+        if (typeof selecciones !== "undefined" && Array.isArray(selecciones)) {
+          const selInTicket = selecciones.find(function(s) { return s.id == selId; });
+          if (selInTicket) {
+            selInTicket.cuota = parseFloat(nuevaCuota);
+            if (typeof renderizarBoleto === "function") {
+              renderizarBoleto();
+            }
+          }
         }
       }
     }
@@ -895,6 +963,10 @@
     if (data.tipo_evento === "EVENTO_FINALIZADO") {
       window.location.reload();
     }
+
+    if (data.tipo_evento === "EVENTO_MODIFICADO") {
+      window.location.reload();
+    }
   };
 
   oddsSocket.onclose = function(e) {
@@ -924,28 +996,60 @@
     }
   }
 
-  // --- Apuesta Combinada ---
+  // --- Apuesta Combinada / Simples ---
   var selecciones = [];
+  var modoBoleto = "simples"; // Por defecto "simples"
 
-  function seleccionarCuota(seleccionId, nombre, cuota, evento) {
+  function cambiarModoBoleto(modo) {
+    modoBoleto = modo;
+    var tabSimples = document.getElementById("tab-boleto-simples");
+    var tabCombinadas = document.getElementById("tab-boleto-combinadas");
+    var inputTipo = document.getElementById("input-tipo-apuesta");
+
+    var btnActivo = "flex-1 py-1.5 text-[11px] font-black uppercase tracking-wider rounded-lg transition-all text-center bg-white text-indigo-700 shadow-sm border border-slate-200/40";
+    var btnInactivo = "flex-1 py-1.5 text-[11px] font-black uppercase tracking-wider rounded-lg transition-all text-center text-slate-500 hover:text-slate-700 hover:bg-slate-200/50";
+
+    if (modo === "simples") {
+      tabSimples.className = btnActivo;
+      tabCombinadas.className = btnInactivo;
+      inputTipo.value = "simples";
+    } else {
+      tabSimples.className = btnInactivo;
+      tabCombinadas.className = btnActivo;
+      inputTipo.value = "combinada";
+    }
+    renderizarBoleto();
+  }
+
+  function seleccionarCuota(seleccionId, nombre, cuota, evento, mercadoId) {
     var eventoKey = evento;
     var existente = selecciones.find(function(s) { return s.id == seleccionId; });
     if (existente) {
       quitarSeleccion(seleccionId);
       return;
     }
-    var mismoEvento = selecciones.find(function(s) { return s.evento == eventoKey; });
-    if (mismoEvento) {
-      // Reemplazar la seleccion del mismo evento
-      selecciones = selecciones.filter(function(s) { return s.evento != eventoKey; });
+    
+    // Antifraude Frontend: Reemplazar si se selecciona otra cuota del MISMO mercado
+    var sameMarket = selecciones.find(function(s) { return s.mercadoId == mercadoId; });
+    if (sameMarket) {
+      quitarSeleccion(sameMarket.id);
     }
-    selecciones.push({ id: seleccionId, nombre: nombre, cuota: parseFloat(cuota), evento: eventoKey });
+
+    selecciones.push({ id: seleccionId, nombre: nombre, cuota: parseFloat(cuota), evento: eventoKey, mercadoId: mercadoId, monto: 0 });
     renderizarBoleto();
   }
 
   function quitarSeleccion(seleccionId) {
     selecciones = selecciones.filter(function(s) { return s.id != seleccionId; });
     renderizarBoleto();
+  }
+
+  function actualizarMontoSimple(seleccionId, valor) {
+    var sel = selecciones.find(function(s) { return s.id == seleccionId; });
+    if (sel) {
+      sel.monto = parseFloat(valor) || 0;
+      calcularRetorno();
+    }
   }
 
   function renderizarBoleto() {
@@ -955,28 +1059,75 @@
     if (selecciones.length === 0) {
       document.getElementById("form-apuesta").classList.add("hidden");
       document.getElementById("boleto-vacio").classList.remove("hidden");
+      sincronizarBotonesUi();
       return;
     }
 
     document.getElementById("boleto-vacio").classList.add("hidden");
     document.getElementById("form-apuesta").classList.remove("hidden");
 
-    var cuotaAcumulada = 1;
-    for (var i = 0; i < selecciones.length; i++) {
-      cuotaAcumulada *= selecciones[i].cuota;
+    var inputGlobal = document.getElementById("boleto-input-combinada");
+    var btn = document.getElementById("btn-apostar");
 
-      var div = document.createElement("div");
-      div.className = "bg-indigo-50/50 border border-indigo-100 p-3 rounded-2xl relative shadow-inner";
-      div.innerHTML = 
-        '<button type="button" onclick="quitarSeleccion(' + selecciones[i].id + ')" class="absolute top-2 right-2 text-slate-400 hover:text-rose-500 transition-colors p-1 hover:bg-white rounded-lg">' +
-          '<i data-lucide="x" class="w-3.5 h-3.5"></i>' +
-        '</button>' +
-        '<span class="text-[9px] text-slate-500 font-black uppercase tracking-widest block truncate max-w-[80%] mb-0.5">' + selecciones[i].evento + '</span>' +
-        '<div class="flex items-center justify-between">' +
-          '<span class="text-sm font-black text-slate-900">' + selecciones[i].nombre + '</span>' +
-          '<span class="font-mono font-black text-indigo-700 text-sm bg-white px-2 py-0.5 rounded-lg shadow-sm border border-indigo-100">@' + selecciones[i].cuota.toFixed(2) + '</span>' +
-        '</div>';
-      container.appendChild(div);
+    if (modoBoleto === "simples") {
+      inputGlobal.classList.add("hidden");
+      btn.innerText = "Apostar " + selecciones.length + " Simples";
+      btn.disabled = false;
+      
+      for (var i = 0; i < selecciones.length; i++) {
+        var s = selecciones[i];
+        var div = document.createElement("div");
+        div.className = "bg-white border border-slate-200 p-3 rounded-xl relative shadow-sm";
+        div.innerHTML = 
+          '<button type="button" onclick="quitarSeleccion(' + s.id + ')" class="absolute top-2 right-2 text-slate-400 hover:text-rose-500 transition-colors p-1 hover:bg-slate-50 rounded-lg">' +
+            '<i data-lucide="trash-2" class="w-4 h-4"></i>' +
+          '</button>' +
+          '<div class="flex items-center gap-1.5 mb-1 text-slate-900 font-bold text-sm">' +
+             '<i data-lucide="trophy" class="w-3.5 h-3.5 text-indigo-500"></i>' +
+             '<span class="truncate max-w-[85%]">' + s.evento + '</span>' +
+          '</div>' +
+          '<div class="flex items-center justify-between mb-3">' +
+            '<span class="text-xs font-medium text-slate-500">' + s.nombre + '</span>' +
+            '<span class="font-mono font-black text-slate-800 text-sm bg-slate-100 px-2 py-0.5 rounded-lg border border-slate-200">' + s.cuota.toFixed(2) + '</span>' +
+          '</div>' +
+          '<div class="flex items-center gap-2">' +
+            '<div class="relative flex-1">' +
+               '<div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none"><span class="text-slate-400 font-bold text-xs">f.</span></div>' +
+               '<input type="number" step="0.5" min="0.5" value="' + (s.monto > 0 ? s.monto : "") + '" oninput="actualizarMontoSimple(' + s.id + ', this.value)" placeholder="0.00" class="w-full bg-slate-50 border border-slate-200 focus:border-indigo-500 rounded-lg py-1.5 pl-7 pr-2 text-sm font-bold text-slate-800 outline-none">' +
+            '</div>' +
+            '<button type="button" onclick="actualizarMontoSimple(' + s.id + ', 10); renderizarBoleto()" class="bg-slate-100 hover:bg-slate-200 text-slate-600 font-black text-xs px-3 py-1.5 rounded-lg transition-colors">+10</button>' +
+            '<button type="button" onclick="actualizarMontoSimple(' + s.id + ', 50); renderizarBoleto()" class="bg-slate-100 hover:bg-slate-200 text-slate-600 font-black text-xs px-3 py-1.5 rounded-lg transition-colors">+50</button>' +
+          '</div>';
+        container.appendChild(div);
+      }
+    } else {
+      inputGlobal.classList.remove("hidden");
+      if (selecciones.length >= 2) {
+        btn.disabled = false;
+        btn.innerText = "Apostar Combinada";
+      } else {
+        btn.disabled = true;
+        btn.innerText = "Agrega 2 selecciones";
+      }
+
+      var cuotaAcumulada = 1;
+      for (var i = 0; i < selecciones.length; i++) {
+        var s = selecciones[i];
+        cuotaAcumulada *= s.cuota;
+        var div = document.createElement("div");
+        div.className = "bg-indigo-50/50 border border-indigo-100 p-2.5 rounded-xl relative";
+        div.innerHTML = 
+          '<button type="button" onclick="quitarSeleccion(' + s.id + ')" class="absolute top-1.5 right-1.5 text-slate-400 hover:text-rose-500 transition-colors p-1 hover:bg-white rounded-lg">' +
+            '<i data-lucide="x" class="w-3.5 h-3.5"></i>' +
+          '</button>' +
+          '<span class="text-[9px] text-slate-500 font-black uppercase tracking-widest block truncate max-w-[85%] mb-0.5">' + s.evento + '</span>' +
+          '<div class="flex items-center justify-between">' +
+            '<span class="text-xs font-bold text-slate-800">' + s.nombre + '</span>' +
+            '<span class="font-mono font-black text-indigo-700 text-xs">@' + s.cuota.toFixed(2) + '</span>' +
+          '</div>';
+        container.appendChild(div);
+      }
+      document.getElementById("boleto-cuota-acumulada").innerText = cuotaAcumulada.toFixed(2);
     }
 
     var ids = selecciones.map(function(s) { return s.id; });
@@ -986,50 +1137,101 @@
     }
     document.getElementById("input-seleccion-ids").value = ids.join(",");
     document.getElementById("input-cuotas-esperadas").value = JSON.stringify(cuotasObj);
-    document.getElementById("boleto-cuota-acumulada").innerText = cuotaAcumulada.toFixed(2);
-
-    var btn = document.getElementById("btn-apostar");
-    if (selecciones.length >= 2) {
-      btn.disabled = false;
-      btn.innerText = "Apostar Combinada (" + selecciones.length + " selecciones)";
-    } else {
-      btn.disabled = true;
-      btn.innerText = "Agrega al menos 2 selecciones";
-    }
 
     calcularRetorno();
     if (window.lucide) lucide.createIcons();
+    
+    // Sincronizar estilo de los botones en el catálogo
+    sincronizarBotonesUi();
+  }
+
+  function sincronizarBotonesUi() {
+    const allButtons = document.querySelectorAll('[id^="btn-seleccion-"]');
+    allButtons.forEach(btn => {
+      if (btn.hasAttribute("disabled")) return;
+      
+      const selId = btn.id.replace("btn-seleccion-", "");
+      const isSelected = selecciones.some(s => s.id == selId);
+      
+      const spans = btn.querySelectorAll("span");
+      const spanNombre = spans[0];
+      const spanCuota = spans[1];
+
+      if (isSelected) {
+        // Estilo seleccionado (tema Indigo)
+        btn.classList.remove("bg-white", "border-slate-200/60", "hover:bg-indigo-50/30", "hover:border-indigo-500");
+        btn.classList.add("bg-indigo-600", "border-indigo-600", "hover:bg-indigo-700", "hover:border-indigo-700");
+        
+        if (spanNombre) {
+          spanNombre.classList.remove("text-slate-500", "group-hover:text-indigo-600");
+          spanNombre.classList.add("text-indigo-100", "group-hover:text-white");
+        }
+        if (spanCuota) {
+          spanCuota.classList.remove("text-slate-800", "group-hover:text-indigo-700");
+          spanCuota.classList.add("text-white", "group-hover:text-white");
+        }
+      } else {
+        // Estilo normal
+        btn.classList.remove("bg-indigo-600", "border-indigo-600", "hover:bg-indigo-700", "hover:border-indigo-700");
+        btn.classList.add("bg-white", "border-slate-200/60", "hover:bg-indigo-50/30", "hover:border-indigo-500");
+        
+        if (spanNombre) {
+          spanNombre.classList.remove("text-indigo-100", "group-hover:text-white");
+          spanNombre.classList.add("text-slate-500", "group-hover:text-indigo-600");
+        }
+        if (spanCuota) {
+          spanCuota.classList.remove("text-white", "group-hover:text-white");
+          spanCuota.classList.add("text-slate-800", "group-hover:text-indigo-700");
+        }
+      }
+    });
   }
 
   function calcularRetorno() {
-    var monto = parseFloat(document.getElementById("input-monto").value) || 0;
-    var cuota = parseFloat(document.getElementById("boleto-cuota-acumulada").innerText) || 0;
-    var retorno = (monto * cuota).toFixed(2);
-    document.getElementById("retorno-potencial").innerText = retorno;
+    var retorno = 0;
+    if (modoBoleto === "simples") {
+      for (var i = 0; i < selecciones.length; i++) {
+        retorno += selecciones[i].monto * selecciones[i].cuota;
+      }
+    } else {
+      var monto = parseFloat(document.getElementById("input-monto-global").value) || 0;
+      var cuota = parseFloat(document.getElementById("boleto-cuota-acumulada").innerText) || 0;
+      retorno = monto * cuota;
+    }
+    document.getElementById("retorno-potencial").innerText = "f. " + retorno.toFixed(2);
   }
 
-  function sumarMonto(cantidad) {
-    var input = document.getElementById("input-monto");
-    var actual = parseFloat(input.value) || 0;
-    input.value = (actual + cantidad).toFixed(2);
-    calcularRetorno();
-  }
-
-  function usarMaximo(saldoMaximo) {
-    var input = document.getElementById("input-monto");
+  function usarMaximoGlobal(saldoMaximo) {
+    var input = document.getElementById("input-monto-global");
     var maximo = Math.min(saldoMaximo, 5000);
     input.value = maximo.toFixed(2);
     calcularRetorno();
   }
 
-  function limpiarMonto() {
-    document.getElementById("input-monto").value = "";
-    document.getElementById("retorno-potencial").innerText = "0.00";
-  }
-
-  function limpiarBoleto() {
-    selecciones = [];
-    renderizarBoleto();
+  function prepararSubmit(e) {
+    if (modoBoleto === "simples") {
+      var montosSimples = {};
+      var valid = true;
+      for (var i = 0; i < selecciones.length; i++) {
+        if (!selecciones[i].monto || selecciones[i].monto < 0.5) {
+          valid = false;
+        }
+        montosSimples[selecciones[i].id] = selecciones[i].monto;
+      }
+      if (!valid) {
+        e.preventDefault();
+        alert("Por favor, ingresa un monto válido (mín. 0.50) para todas tus selecciones simples.");
+        return;
+      }
+      document.getElementById("input-montos-simples").value = JSON.stringify(montosSimples);
+    } else {
+      var montoTotal = parseFloat(document.getElementById("input-monto-global").value);
+      if (!montoTotal || montoTotal < 0.5) {
+        e.preventDefault();
+        alert("Por favor, ingresa un monto válido (mín. 0.50) para tu apuesta combinada.");
+        return;
+      }
+    }
   }
 
   function toggleDetallesApuesta(btn) {

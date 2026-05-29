@@ -210,6 +210,33 @@ def crear_apuesta_combinada(user, seleccion_ids, monto, cuotas_esperadas=None):
 
 
 @transaction.atomic
+def crear_mercados_para_evento(evento):
+    from decimal import Decimal
+
+    mercado_1x2, _ = Mercado.objects.get_or_create(evento=evento, nombre="1X2")
+    if mercado_1x2.selecciones.count() == 0:
+        Seleccion.objects.create(mercado=mercado_1x2, nombre="Local", cuota=Decimal("2.0000"))
+        Seleccion.objects.create(mercado=mercado_1x2, nombre="Empate", cuota=Decimal("3.5000"))
+        Seleccion.objects.create(mercado=mercado_1x2, nombre="Visitante", cuota=Decimal("2.0000"))
+
+    mercado_doble_op, _ = Mercado.objects.get_or_create(evento=evento, nombre="Doble Oportunidad")
+    if mercado_doble_op.selecciones.count() == 0:
+        Seleccion.objects.create(mercado=mercado_doble_op, nombre="1X", cuota=Decimal("1.3000"))
+        Seleccion.objects.create(mercado=mercado_doble_op, nombre="12", cuota=Decimal("1.2500"))
+        Seleccion.objects.create(mercado=mercado_doble_op, nombre="X2", cuota=Decimal("1.3000"))
+
+    mercado_myg, _ = Mercado.objects.get_or_create(evento=evento, nombre="Más/Menos 2.5")
+    if mercado_myg.selecciones.count() == 0:
+        Seleccion.objects.create(mercado=mercado_myg, nombre="Más de 2.5", cuota=Decimal("1.9000"))
+        Seleccion.objects.create(mercado=mercado_myg, nombre="Menos de 2.5", cuota=Decimal("1.9000"))
+
+    mercado_btts, _ = Mercado.objects.get_or_create(evento=evento, nombre="Ambos Equipos Anotan")
+    if mercado_btts.selecciones.count() == 0:
+        Seleccion.objects.create(mercado=mercado_btts, nombre="Sí", cuota=Decimal("2.0000"))
+        Seleccion.objects.create(mercado=mercado_btts, nombre="No", cuota=Decimal("1.7500"))
+
+
+@transaction.atomic
 def liquidar_apuestas_evento(evento_id, seleccion_ganadora_id):
     try:
         evento = Evento.objects.get(pk=evento_id)

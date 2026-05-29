@@ -8,9 +8,30 @@ from decimal import Decimal
 from config.choices import EstadoEvento, EstadoApuesta, TipoApuesta
 
 
+class Equipo(models.Model):
+    nombre = models.CharField(max_length=100, unique=True)
+
+    def __str__(self):
+        return self.nombre
+
+    class Meta:
+        db_table = "equipos"
+        verbose_name = "Equipo"
+        verbose_name_plural = "Equipos"
+        ordering = ["nombre"]
+
+
 class Evento(models.Model):
     local = models.CharField(max_length=100)
     visitante = models.CharField(max_length=100)
+    local_equipo = models.ForeignKey(
+        Equipo, on_delete=models.SET_NULL, null=True, blank=True,
+        related_name="eventos_local"
+    )
+    visitante_equipo = models.ForeignKey(
+        Equipo, on_delete=models.SET_NULL, null=True, blank=True,
+        related_name="eventos_visitante"
+    )
     fecha_inicio = models.DateTimeField()
     estado = models.CharField(
         max_length=20,
@@ -21,6 +42,27 @@ class Evento(models.Model):
     goles_visitante = models.IntegerField(default=0, validators=[MinValueValidator(0)])
     minuto_actual = models.IntegerField(default=0)
     periodo = models.CharField(max_length=20, default="1T")
+
+    class Meta:
+        db_table = "eventos"
+        verbose_name = "Evento"
+        verbose_name_plural = "Eventos"
+        ordering = ["fecha_inicio"]
+        unique_together = ["local", "visitante", "fecha_inicio"]
+
+    def clean(self):
+        super().clean()
+        qs = Evento.objects.filter(
+            local__iexact=self.local,
+            visitante__iexact=self.visitante,
+            fecha_inicio=self.fecha_inicio,
+        )
+        if self.pk:
+            qs = qs.exclude(pk=self.pk)
+        if qs.exists():
+            raise ValidationError(
+                f"Ya existe un evento '{self.local} vs {self.visitante}' en esa fecha y hora."
+            )
 
     def save(self, *args, **kwargs):
         # Interceptar cambios en los goles y estados para actualizar cuotas y tiempos dinámicamente
@@ -45,16 +87,11 @@ class Evento(models.Model):
                     return
             except Evento.DoesNotExist:
                 pass
+        self.full_clean()
         super().save(*args, **kwargs)
 
     def __str__(self):
         return f"{self.local} vs {self.visitante} ({self.get_estado_display()})"
-
-    class Meta:
-        db_table = "eventos"
-        verbose_name = "Evento"
-        verbose_name_plural = "Eventos"
-        ordering = ["fecha_inicio"]
 
 
 class Mercado(models.Model):

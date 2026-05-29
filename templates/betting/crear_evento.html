@@ -1,0 +1,103 @@
+{% extends 'base.html' %}
+{% load l10n %}
+
+{% block title %}Crear Evento - FairBet Lab{% endblock %}
+
+{% block content %}
+<div class="w-full max-w-2xl mx-auto">
+  <div class="bg-white rounded-[2rem] shadow-xl ring-1 ring-slate-200/50 overflow-hidden">
+    <div class="h-2 w-full bg-gradient-to-r from-indigo-500 via-purple-500 to-indigo-600"></div>
+
+    <div class="p-8">
+      <div class="flex items-center gap-3 pb-6 border-b border-slate-100 mb-6">
+        <div class="p-2 bg-indigo-50 text-indigo-600 rounded-xl">
+          <i data-lucide="calendar-plus" class="w-6 h-6"></i>
+        </div>
+        <div>
+          <h2 class="text-2xl font-extrabold tracking-tight text-slate-900">Crear Nuevo Evento</h2>
+          <p class="text-slate-500 text-sm mt-0.5">Agrega un nuevo partido al catálogo de apuestas</p>
+        </div>
+      </div>
+
+      {% if messages %}
+        <div class="space-y-3 mb-6">
+          {% for message in messages %}
+            <div class="p-4 rounded-2xl text-sm font-semibold border flex items-center gap-3 shadow-sm
+              {% if message.tags == 'success' %}
+                bg-emerald-50/80 text-emerald-800 border-emerald-100/80
+              {% else %}
+                bg-rose-50/80 text-rose-800 border-rose-100/80
+              {% endif %}">
+              {% if message.tags == 'success' %}
+                <div class="p-1 bg-emerald-600 text-white rounded-lg shadow-sm">
+                  <i data-lucide="check" class="w-4 h-4"></i>
+                </div>
+              {% else %}
+                <div class="p-1 bg-rose-600 text-white rounded-lg shadow-sm">
+                  <i data-lucide="alert-triangle" class="w-4 h-4"></i>
+                </div>
+              {% endif %}
+              <span>{{ message }}</span>
+            </div>
+          {% endfor %}
+        </div>
+      {% endif %}
+
+      <form method="POST" class="space-y-6">
+        {% csrf_token %}
+
+        <div class="space-y-4">
+          <div>
+            <label for="{{ form.local_nombre.id_for_label }}" class="block text-xs font-black text-slate-500 uppercase tracking-widest mb-2">
+              {{ form.local_nombre.label }}
+            </label>
+            {{ form.local_nombre }}
+          </div>
+
+          <div class="flex justify-center">
+            <span class="bg-slate-100 border border-slate-200 px-4 py-1.5 rounded-full text-xs text-slate-400 font-black tracking-widest uppercase">VS</span>
+          </div>
+
+          <div>
+            <label for="{{ form.visitante_nombre.id_for_label }}" class="block text-xs font-black text-slate-500 uppercase tracking-widest mb-2">
+              {{ form.visitante_nombre.label }}
+            </label>
+            {{ form.visitante_nombre }}
+          </div>
+
+          <div>
+            <label for="{{ form.fecha_inicio.id_for_label }}" class="block text-xs font-black text-slate-500 uppercase tracking-widest mb-2">
+              {{ form.fecha_inicio.label }}
+            </label>
+            {{ form.fecha_inicio }}
+          </div>
+        </div>
+
+        <div class="flex items-center gap-3 pt-2">
+          <button type="submit" class="flex-1 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white font-black py-4 rounded-2xl shadow-xl shadow-indigo-200 transition-all duration-200 text-sm flex items-center justify-center gap-2 active:scale-95">
+            <i data-lucide="sparkles" class="w-5 h-5"></i>
+            <span>Crear Evento</span>
+          </button>
+          <a href="{% url 'catalogo_html' %}" class="px-6 py-4 bg-white border-2 border-slate-200 hover:border-slate-300 text-slate-600 hover:text-slate-800 font-bold rounded-2xl transition-all text-sm flex items-center gap-2 shadow-sm hover:shadow-md active:scale-95">
+            <i data-lucide="x" class="w-4 h-4"></i>
+            <span>Cancelar</span>
+          </a>
+        </div>
+      </form>
+
+      {% if equipos %}
+        <div class="mt-8 pt-6 border-t border-slate-100">
+          <h3 class="text-xs font-black text-slate-400 uppercase tracking-widest mb-3">Equipos Registrados</h3>
+          <div class="flex flex-wrap gap-2">
+            {% for equipo in equipos %}
+              <span class="bg-slate-50 border border-slate-200 px-3 py-1.5 rounded-lg text-xs font-bold text-slate-600 shadow-sm">{{ equipo.nombre }}</span>
+            {% endfor %}
+          </div>
+        </div>
+      {% endif %}
+    </div>
+
+    <div class="h-4 w-full bg-[radial-gradient(circle,theme(colors.slate.100)_4px,transparent_4px)] bg-[length:16px_16px] border-t border-dashed border-slate-200"></div>
+  </div>
+</div>
+{% endblock %}

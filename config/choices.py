@@ -44,6 +44,7 @@ class EstadoEvento(models.TextChoices):
 
 class EstadoApuesta(models.TextChoices):
     ACCEPTED = "accepted", "Aceptada"
+    CASHED_OUT = "cashed_out", "Retirada"
     WON = "won", "Ganada"
     LOST = "lost", "Perdida"
     CANCELLED = "cancelled", "Cancelada"

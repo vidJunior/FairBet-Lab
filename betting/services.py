@@ -209,6 +209,111 @@ def crear_apuesta_combinada(user, seleccion_ids, monto, cuotas_esperadas=None):
     return apuesta
 
 
+FACTOR_CASA = Decimal("0.95")
+
+
+def calcular_cashout(apuesta):
+    if apuesta.estado != EstadoApuesta.ACCEPTED:
+        return Decimal("0.0000")
+
+    from decimal import Decimal
+
+    if apuesta.tipo == "SIMPLE" and apuesta.seleccion:
+        return _calcular_cashout_simple(apuesta)
+    elif apuesta.tipo == "COMBINADA":
+        return _calcular_cashout_combinada(apuesta)
+    return Decimal("0.0000")
+
+
+def _calcular_cashout_simple(apuesta):
+    sel = apuesta.seleccion
+    evento = sel.mercado.evento
+    if evento.estado in (EstadoEvento.FINALIZADO, EstadoEvento.ANULADO):
+        return Decimal("0.0000")
+
+    cuota_original = apuesta.cuota_fijada
+    cuota_actual = sel.cuota
+    stake = apuesta.monto
+
+    if cuota_original <= 0 or cuota_actual <= 0:
+        return Decimal("0.0000")
+
+    cashout = stake * cuota_original / cuota_actual * FACTOR_CASA
+    return max(cashout, Decimal("0.0000")).quantize(Decimal("0.01"))
+
+
+def _calcular_cashout_combinada(apuesta):
+    detalles = apuesta.detalles.select_related("seleccion__mercado__evento")
+    cuota_original_acum = apuesta.cuota_fijada
+    cuota_actual_acum = Decimal("1.0000")
+
+    for det in detalles:
+        ev = det.seleccion.mercado.evento
+        if ev.estado in (EstadoEvento.FINALIZADO, EstadoEvento.ANULADO):
+            cuota_actual_acum *= Decimal("1.0000")
+        else:
+            cuota_actual_acum *= det.seleccion.cuota
+
+    if cuota_original_acum <= 0 or cuota_actual_acum <= 0:
+        return Decimal("0.0000")
+
+    stake = apuesta.monto
+    cashout = stake * cuota_original_acum / cuota_actual_acum * FACTOR_CASA
+    return max(cashout, Decimal("0.0000")).quantize(Decimal("0.01"))
+
+
+@transaction.atomic
+def procesar_cashout(apuesta, user):
+    from wallet.services import registrar_movimiento
+    import uuid
+
+    if apuesta.usuario != user:
+        raise ValidationError("Esta apuesta no te pertenece.")
+    if apuesta.estado != EstadoApuesta.ACCEPTED:
+        raise ValidationError("Solo puedes retirar apuestas activas.")
+
+    cashout = calcular_cashout(apuesta)
+    if cashout <= 0:
+        raise ValidationError("El cashout no está disponible para esta apuesta en este momento.")
+
+    monto_original = apuesta.monto
+    tid = uuid.uuid4()
+    registrar_movimiento(tid, user, TipoCuenta.APUESTAS_PENDIENTES, None, TipoCuenta.CASA, monto_original)
+    registrar_movimiento(tid, None, TipoCuenta.CASA, user, TipoCuenta.WALLET_USUARIO, cashout)
+
+    apuesta.estado = EstadoApuesta.CASHED_OUT
+    apuesta.save()
+
+    return apuesta, cashout
+
+
+@transaction.atomic
+def crear_mercados_para_evento(evento):
+    from decimal import Decimal
+
+    mercado_1x2, _ = Mercado.objects.get_or_create(evento=evento, nombre="1X2")
+    if mercado_1x2.selecciones.count() == 0:
+        Seleccion.objects.create(mercado=mercado_1x2, nombre="Local", cuota=Decimal("2.0000"))
+        Seleccion.objects.create(mercado=mercado_1x2, nombre="Empate", cuota=Decimal("3.5000"))
+        Seleccion.objects.create(mercado=mercado_1x2, nombre="Visitante", cuota=Decimal("2.0000"))
+
+    mercado_doble_op, _ = Mercado.objects.get_or_create(evento=evento, nombre="Doble Oportunidad")
+    if mercado_doble_op.selecciones.count() == 0:
+        Seleccion.objects.create(mercado=mercado_doble_op, nombre="1X", cuota=Decimal("1.3000"))
+        Seleccion.objects.create(mercado=mercado_doble_op, nombre="12", cuota=Decimal("1.2500"))
+        Seleccion.objects.create(mercado=mercado_doble_op, nombre="X2", cuota=Decimal("1.3000"))
+
+    mercado_myg, _ = Mercado.objects.get_or_create(evento=evento, nombre="Más/Menos 2.5")
+    if mercado_myg.selecciones.count() == 0:
+        Seleccion.objects.create(mercado=mercado_myg, nombre="Más de 2.5", cuota=Decimal("1.9000"))
+        Seleccion.objects.create(mercado=mercado_myg, nombre="Menos de 2.5", cuota=Decimal("1.9000"))
+
+    mercado_btts, _ = Mercado.objects.get_or_create(evento=evento, nombre="Ambos Equipos Anotan")
+    if mercado_btts.selecciones.count() == 0:
+        Seleccion.objects.create(mercado=mercado_btts, nombre="Sí", cuota=Decimal("2.0000"))
+        Seleccion.objects.create(mercado=mercado_btts, nombre="No", cuota=Decimal("1.7500"))
+
+
 @transaction.atomic
 def liquidar_apuestas_evento(evento_id, seleccion_ganadora_id):
     try:

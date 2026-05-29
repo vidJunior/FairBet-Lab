@@ -1,5 +1,5 @@
 from django.contrib import admin
-from betting.models import Evento, Mercado, Seleccion, Apuesta
+from betting.models import Evento, Mercado, Seleccion, Apuesta, Equipo
 
 
 @admin.register(Evento)
@@ -18,6 +18,12 @@ class MercadoAdmin(admin.ModelAdmin):
 @admin.register(Seleccion)
 class SeleccionAdmin(admin.ModelAdmin):
     list_display = ["id", "nombre", "cuota", "mercado"]
+    search_fields = ["nombre"]
+
+
+@admin.register(Equipo)
+class EquipoAdmin(admin.ModelAdmin):
+    list_display = ["id", "nombre"]
     search_fields = ["nombre"]
 
 

@@ -1,0 +1,341 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Historial de Apuestas - FairBet Lab{% endblock %}
+
+{% block extra_head %}
+<style>
+  .custom-scrollbar::-webkit-scrollbar {
+    width: 6px;
+  }
+  .custom-scrollbar::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  .custom-scrollbar::-webkit-scrollbar-thumb {
+    background-color: #cbd5e1;
+    border-radius: 10px;
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="w-full max-w-5xl mx-auto space-y-8 py-6">
+
+  <!-- Encabezado de la página -->
+  <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
+    <div>
+      <h1 class="text-3xl font-black tracking-tight text-slate-900 flex items-center gap-3">
+        <div class="p-2 bg-indigo-50 text-indigo-600 rounded-2xl shadow-sm">
+          <i data-lucide="history" class="w-7 h-7"></i>
+        </div>
+        Historial de Apuestas
+      </h1>
+      <p class="text-sm font-medium text-slate-500 mt-1">Monitorea y analiza el rendimiento de todas tus predicciones deportivas.</p>
+    </div>
+    
+    <!-- Widget de Saldo Rápido -->
+    <div class="bg-gradient-to-br from-slate-900 to-indigo-950 text-white rounded-3xl p-5 shadow-lg flex items-center gap-4 min-w-[240px]">
+      <div class="p-3 bg-white/10 rounded-2xl">
+        <i data-lucide="wallet" class="w-6 h-6 text-indigo-300"></i>
+      </div>
+      <div>
+        <p class="text-[10px] uppercase tracking-widest font-extrabold text-indigo-200">Saldo Disponible</p>
+        <p class="text-2xl font-black font-mono tracking-tight text-white mt-0.5">f. {{ saldo|floatformat:2 }}</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Widgets de Estadísticas de Rendimiento -->
+  <div class="grid grid-cols-2 lg:grid-cols-5 gap-4">
+    
+    <!-- Total Apostado -->
+    <div class="bg-white border border-slate-200/80 rounded-3xl p-5 shadow-sm space-y-2">
+      <div class="flex items-center justify-between text-slate-400">
+        <span class="text-xs font-bold uppercase tracking-wider text-slate-500">Total Apostado</span>
+        <div class="p-1.5 bg-slate-50 text-slate-600 rounded-lg">
+          <i data-lucide="trending-up" class="w-4 h-4"></i>
+        </div>
+      </div>
+      <p class="text-xl font-black font-mono text-slate-900">f. {{ total_apostado|floatformat:2 }}</p>
+    </div>
+
+    <!-- Total Retornado -->
+    <div class="bg-white border border-slate-200/80 rounded-3xl p-5 shadow-sm space-y-2">
+      <div class="flex items-center justify-between text-slate-400">
+        <span class="text-xs font-bold uppercase tracking-wider text-slate-500">Retornos</span>
+        <div class="p-1.5 bg-indigo-50 text-indigo-600 rounded-lg">
+          <i data-lucide="coins" class="w-4 h-4"></i>
+        </div>
+      </div>
+      <p class="text-xl font-black font-mono text-slate-900">f. {{ total_retornado|floatformat:2 }}</p>
+    </div>
+
+    <!-- Balance Neto -->
+    <div class="bg-white border border-slate-200/80 rounded-3xl p-5 shadow-sm space-y-2">
+      <div class="flex items-center justify-between text-slate-400">
+        <span class="text-xs font-bold uppercase tracking-wider text-slate-500">Balance Neto</span>
+        {% if net_balance >= 0 %}
+          <div class="p-1.5 bg-emerald-50 text-emerald-600 rounded-lg">
+            <i data-lucide="arrow-up-right" class="w-4 h-4"></i>
+          </div>
+        {% else %}
+          <div class="p-1.5 bg-rose-50 text-rose-600 rounded-lg">
+            <i data-lucide="arrow-down-left" class="w-4 h-4"></i>
+          </div>
+        {% endif %}
+      </div>
+      <p class="text-xl font-black font-mono {% if net_balance >= 0 %}text-emerald-600{% else %}text-rose-600{% endif %}">
+        {% if net_balance >= 0 %}+{% endif %}f. {{ net_balance|floatformat:2 }}
+      </p>
+    </div>
+
+    <!-- Ganadas -->
+    <div class="bg-white border border-slate-200/80 rounded-3xl p-5 shadow-sm space-y-2">
+      <div class="flex items-center justify-between text-slate-400">
+        <span class="text-xs font-bold uppercase tracking-wider text-slate-500">Ganadas</span>
+        <div class="p-1.5 bg-emerald-50 text-emerald-600 rounded-lg">
+          <i data-lucide="check-circle" class="w-4 h-4"></i>
+        </div>
+      </div>
+      <p class="text-xl font-black text-slate-900">{{ ganadas_count }}</p>
+    </div>
+
+    <!-- Perdidas -->
+    <div class="bg-white border border-slate-200/80 rounded-3xl p-5 shadow-sm space-y-2 col-span-2 lg:col-span-1">
+      <div class="flex items-center justify-between text-slate-400">
+        <span class="text-xs font-bold uppercase tracking-wider text-slate-500">Perdidas</span>
+        <div class="p-1.5 bg-rose-50 text-rose-600 rounded-lg">
+          <i data-lucide="x-circle" class="w-4 h-4"></i>
+        </div>
+      </div>
+      <p class="text-xl font-black text-slate-900">{{ perdidas_count }}</p>
+    </div>
+
+  </div>
+
+  <!-- Contenedor Principal de la Lista -->
+  <div class="bg-white border border-slate-200/80 rounded-[2rem] shadow-sm overflow-hidden">
+    
+    <!-- Filtros de Estado Interactivos (Client-side) -->
+    <div class="p-6 border-b border-slate-100 flex flex-wrap items-center justify-between gap-4 bg-slate-50/50">
+      <div class="flex bg-slate-200/60 p-1 rounded-xl gap-1 border border-slate-200/50 w-full sm:w-auto">
+        <button onclick="filtrarHistorial('todos')" id="filter-btn-todos" class="flex-1 sm:flex-initial px-4 py-2 text-xs font-black uppercase tracking-wider rounded-lg transition-all text-center bg-white text-indigo-700 shadow-sm">
+          Todas ({{ apuestas|length }})
+        </button>
+        <button onclick="filtrarHistorial('accepted')" id="filter-btn-accepted" class="flex-1 sm:flex-initial px-4 py-2 text-xs font-black uppercase tracking-wider rounded-lg transition-all text-center text-slate-600 hover:text-slate-950">
+          Pendientes
+        </button>
+        <button onclick="filtrarHistorial('won')" id="filter-btn-won" class="flex-1 sm:flex-initial px-4 py-2 text-xs font-black uppercase tracking-wider rounded-lg transition-all text-center text-slate-600 hover:text-slate-950">
+          Ganadas
+        </button>
+        <button onclick="filtrarHistorial('lost')" id="filter-btn-lost" class="flex-1 sm:flex-initial px-4 py-2 text-xs font-black uppercase tracking-wider rounded-lg transition-all text-center text-slate-600 hover:text-slate-950">
+          Perdidas
+        </button>
+        <button onclick="filtrarHistorial('otros')" id="filter-btn-otros" class="flex-1 sm:flex-initial px-4 py-2 text-xs font-black uppercase tracking-wider rounded-lg transition-all text-center text-slate-600 hover:text-slate-950">
+          Retiros / Canc.
+        </button>
+      </div>
+      
+      <div class="text-xs font-bold text-slate-400 uppercase tracking-widest flex items-center gap-2">
+        <i data-lucide="sliders-horizontal" class="w-4 h-4 text-indigo-500"></i>
+        <span>Filtro Activo</span>
+      </div>
+    </div>
+
+    <!-- Lista de Apuestas -->
+    <div class="divide-y divide-slate-100">
+      {% if apuestas %}
+        {% for apuesta in apuestas %}
+          <div data-estado="{{ apuesta.estado }}" class="apuesta-row p-6 hover:bg-slate-50/50 transition-colors">
+            
+            <!-- Encabezado de la apuesta -->
+            <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 pb-4 border-b border-slate-100">
+              <div class="space-y-1">
+                <div class="flex items-center gap-2">
+                  <span class="text-xs font-black text-slate-900 uppercase tracking-wider bg-slate-100 px-2 py-0.5 rounded-lg border border-slate-200">
+                    ID #{{ apuesta.id }}
+                  </span>
+                  <span class="text-xs font-extrabold {% if apuesta.tipo == 'COMBINADA' %}text-indigo-600 bg-indigo-50{% else %}text-slate-600 bg-slate-50{% endif %} px-2 py-0.5 rounded-lg border border-slate-200/50">
+                    {{ apuesta.tipo }}
+                  </span>
+                </div>
+                <div class="flex items-center gap-1.5 text-xs text-slate-400 font-medium">
+                  <i data-lucide="calendar" class="w-3.5 h-3.5"></i>
+                  <span>{{ apuesta.creado|date:"d M Y, H:i" }}</span>
+                </div>
+              </div>
+              
+              <!-- Badge de Estado -->
+              <div>
+                {% if apuesta.estado == 'accepted' %}
+                  <span class="px-3.5 py-1.5 rounded-full text-xs font-extrabold tracking-wider uppercase bg-indigo-50 text-indigo-700 border border-indigo-200/80 shadow-3xs">
+                    Pendiente
+                  </span>
+                {% elif apuesta.estado == 'won' %}
+                  <span class="px-3.5 py-1.5 rounded-full text-xs font-extrabold tracking-wider uppercase bg-emerald-50 text-emerald-700 border border-emerald-200/80 shadow-3xs flex items-center gap-1">
+                    <i data-lucide="check" class="w-3.5 h-3.5"></i> Ganada
+                  </span>
+                {% elif apuesta.estado == 'lost' %}
+                  <span class="px-3.5 py-1.5 rounded-full text-xs font-extrabold tracking-wider uppercase bg-rose-50 text-rose-700 border border-rose-200/80 shadow-3xs flex items-center gap-1">
+                    <i data-lucide="x" class="w-3.5 h-3.5"></i> Perdida
+                  </span>
+                {% elif apuesta.estado == 'cashed_out' %}
+                  <span class="px-3.5 py-1.5 rounded-full text-xs font-extrabold tracking-wider uppercase bg-amber-50 text-amber-700 border border-amber-200/80 shadow-3xs flex items-center gap-1">
+                    <i data-lucide="arrow-left-right" class="w-3.5 h-3.5"></i> Retirada
+                  </span>
+                {% else %}
+                  <span class="px-3.5 py-1.5 rounded-full text-xs font-extrabold tracking-wider uppercase bg-slate-100 text-slate-600 border border-slate-200 shadow-3xs">
+                    Cancelada
+                  </span>
+                {% endif %}
+              </div>
+            </div>
+
+            <!-- Cuerpo/Detalles de las Selecciones -->
+            <div class="py-4 space-y-3">
+              {% if apuesta.tipo == 'SIMPLE' %}
+                <!-- Selección Única -->
+                <div class="bg-white border border-slate-200/60 p-4 rounded-2xl flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+                  <div class="space-y-1">
+                    <div class="flex items-center gap-1.5 text-slate-900 font-bold text-sm">
+                      <i data-lucide="trophy" class="w-4 h-4 text-indigo-500"></i>
+                      <span>{{ apuesta.seleccion.mercado.evento.local }} vs {{ apuesta.seleccion.mercado.evento.visitante }}</span>
+                    </div>
+                    <div class="text-xs text-slate-500 font-medium pl-5">
+                      Mercado: <span class="text-slate-800 font-semibold">{{ apuesta.seleccion.mercado.nombre }}</span> | 
+                      Selección: <span class="text-slate-800 font-black text-indigo-600 bg-indigo-50/50 px-1.5 py-0.5 rounded">{{ apuesta.seleccion.nombre }}</span>
+                    </div>
+                  </div>
+                  <div>
+                    <span class="font-mono font-black text-slate-800 text-sm bg-slate-100 border border-slate-200 px-2.5 py-1 rounded-xl">
+                      @{{ apuesta.cuota_fijada|floatformat:2 }}
+                    </span>
+                  </div>
+                </div>
+              {% else %}
+                <!-- Selecciones de Combinada -->
+                <div class="space-y-2">
+                  <p class="text-[10px] uppercase tracking-widest font-black text-indigo-600">Predicciones Combinadas ({{ apuesta.detalles.count }})</p>
+                  <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    {% for detalle in apuesta.detalles.all %}
+                      <div class="bg-indigo-50/20 border border-indigo-100/60 p-3.5 rounded-2xl flex justify-between items-center gap-2">
+                        <div class="space-y-0.5 truncate max-w-[80%]">
+                          <span class="text-[9px] text-slate-400 font-bold uppercase tracking-wider block truncate">
+                            {{ detalle.seleccion.mercado.evento.local }} vs {{ detalle.seleccion.mercado.evento.visitante }}
+                          </span>
+                          <span class="text-xs font-bold text-slate-800 truncate block">
+                            {{ detalle.seleccion.nombre }}
+                          </span>
+                          <span class="text-[9px] text-slate-500 block font-medium">
+                            {{ detalle.seleccion.mercado.nombre }}
+                          </span>
+                        </div>
+                        <span class="font-mono font-black text-indigo-700 text-xs bg-indigo-50 border border-indigo-100/60 px-2 py-0.5 rounded-lg">
+                          @{{ detalle.cuota_fijada|floatformat:2 }}
+                        </span>
+                      </div>
+                    {% endfor %}
+                  </div>
+                </div>
+              {% endif %}
+            </div>
+
+            <!-- Footer con Montos y Acciones -->
+            <div class="bg-slate-50/60 border border-slate-100 p-4 rounded-2xl flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+              <div class="grid grid-cols-3 gap-6 w-full sm:w-auto">
+                <div>
+                  <span class="text-[9px] font-extrabold uppercase tracking-widest text-slate-400 block">Importe</span>
+                  <span class="font-mono font-black text-slate-700 text-sm">f. {{ apuesta.monto|floatformat:2 }}</span>
+                </div>
+                <div>
+                  <span class="text-[9px] font-extrabold uppercase tracking-widest text-slate-400 block">Cuota Total</span>
+                  <span class="font-mono font-black text-slate-700 text-sm">@{{ apuesta.cuota_fijada|floatformat:2 }}</span>
+                </div>
+                <div>
+                  {% if apuesta.estado == 'accepted' %}
+                    <span class="text-[9px] font-extrabold uppercase tracking-widest text-slate-400 block">Retorno Potencial</span>
+                    <span class="font-mono font-black text-indigo-600 text-sm">f. {{ apuesta.payout|floatformat:2 }}</span>
+                  {% else %}
+                    <span class="text-[9px] font-extrabold uppercase tracking-widest text-slate-400 block">Resultado</span>
+                    <span class="font-mono font-black text-sm {% if apuesta.estado == 'won' %}text-emerald-600{% elif apuesta.estado == 'lost' %}text-rose-600{% else %}text-amber-600{% endif %}">
+                      f. {{ apuesta.retorno|floatformat:2 }}
+                    </span>
+                  {% endif %}
+                </div>
+              </div>
+
+              <!-- Acciones de Apuesta Activa (Cash Out) -->
+              {% if apuesta.estado == 'accepted' %}
+                <div class="flex items-center gap-3 w-full sm:w-auto justify-end">
+                  <form action="{% url 'cashout_html' %}" method="POST" onsubmit="return confirm('¿Confirmas que deseas retirar esta apuesta ahora?');">
+                    {% csrf_token %}
+                    <input type="hidden" name="apuesta_id" value="{{ apuesta.id }}">
+                    <button type="submit" class="w-full sm:w-auto bg-amber-500 hover:bg-amber-600 text-white font-black text-xs px-4 py-2.5 rounded-xl transition-all shadow-sm hover:shadow active:scale-95 flex items-center justify-center gap-1.5">
+                      <i data-lucide="arrow-left-right" class="w-3.5 h-3.5"></i>
+                      Retirar (Cash Out)
+                    </button>
+                  </form>
+                </div>
+              {% endif %}
+            </div>
+
+          </div>
+        {% endfor %}
+      {% else %}
+        <div class="text-center py-20 text-slate-400">
+          <div class="p-4 bg-slate-50 text-slate-300 rounded-full w-fit mx-auto mb-4 border border-slate-100">
+            <i data-lucide="inbox" class="w-12 h-12"></i>
+          </div>
+          <h3 class="text-lg font-bold text-slate-700">Sin historial de apuestas</h3>
+          <p class="text-sm font-medium text-slate-500 mt-1 max-w-sm mx-auto">Aún no has realizado ninguna predicción. ¡Visita el catálogo de eventos para comenzar a apostar!</p>
+          <a href="{% url 'catalogo_html' %}" class="mt-6 inline-flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white font-black text-sm px-6 py-3 rounded-2xl transition-all shadow-md hover:shadow-lg active:scale-95">
+            Ver Catálogo
+          </a>
+        </div>
+      {% endif %}
+    </div>
+
+  </div>
+
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+  function filtrarHistorial(estado) {
+    // 1. Alternar estilos de los botones de filtro
+    const btnIds = ['todos', 'accepted', 'won', 'lost', 'otros'];
+    btnIds.forEach(id => {
+      const btn = document.getElementById('filter-btn-' + id);
+      if (btn) {
+        if (id === estado) {
+          btn.className = "flex-1 sm:flex-initial px-4 py-2 text-xs font-black uppercase tracking-wider rounded-lg transition-all text-center bg-white text-indigo-700 shadow-sm";
+        } else {
+          btn.className = "flex-1 sm:flex-initial px-4 py-2 text-xs font-black uppercase tracking-wider rounded-lg transition-all text-center text-slate-600 hover:text-slate-950";
+        }
+      }
+    });
+
+    // 2. Mostrar/Ocultar filas correspondientes
+    const rows = document.querySelectorAll('.apuesta-row');
+    rows.forEach(row => {
+      const rowEstado = row.getAttribute('data-estado');
+      if (estado === 'todos') {
+        row.classList.remove('hidden');
+      } else if (estado === 'otros') {
+        if (rowEstado === 'cashed_out' || rowEstado === 'cancelled') {
+          row.classList.remove('hidden');
+        } else {
+          row.classList.add('hidden');
+        }
+      } else {
+        if (rowEstado === estado) {
+          row.classList.remove('hidden');
+        } else {
+          row.classList.add('hidden');
+        }
+      }
+    });
+  }
+</script>
+{% endblock %}

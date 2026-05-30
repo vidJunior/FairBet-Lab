@@ -268,12 +268,24 @@
             <div class="flex justify-between items-center mb-3">
               <span
                 class="text-[10px] font-black text-slate-400 uppercase tracking-widest bg-slate-50 px-2 py-1 rounded-md">{{ mercado.nombre }}</span>
-              {# En PROGRAMADOS no se muestra nunca 'Resuelto' aunque el campo sea True (dato sucio) #}
+              {% if mercado.resuelto %}
+              <span id="suspendido-text-{{ mercado.id }}"
+                class="text-[9px] font-black text-white bg-emerald-600 px-2 py-0.5 rounded-md uppercase tracking-widest flex items-center gap-1">🔒
+                Resuelto</span>
+              {% elif not mercado.activo %}
+              <span id="suspendido-text-{{ mercado.id }}"
+                class="text-[9px] font-black text-white bg-rose-500 px-2 py-0.5 rounded-md uppercase tracking-widest animate-pulse">Suspendido</span>
+              {% endif %}
             </div>
             <div class="grid grid-cols-3 gap-3">
               {% for seleccion in mercado.selecciones.all %}
-              <button type="button" id="btn-seleccion-{{ seleccion.id }}"
-                onclick="seleccionarCuota('{{ seleccion.id }}', '{{ seleccion.nombre }}', '{{ seleccion.cuota|stringformat:".2f" }}', '{{ evento.local }} vs {{ evento.visitante }}', '{{ mercado.id }}')" class="border px-3 py-3.5 rounded-2xl transition-all duration-200 text-center flex flex-col justify-center items-center group shadow-2xs hover:shadow-sm bg-white border-slate-200/60 hover:border-indigo-500 hover:bg-indigo-50/30 active:scale-95">
+              <button type="button" id="btn-seleccion-{{ seleccion.id }}" {% if not mercado.activo %}disabled{% endif %}
+                onclick="seleccionarCuota('{{ seleccion.id }}', '{{ seleccion.nombre }}', '{{ seleccion.cuota|stringformat:".2f" }}', '{{ evento.local }} vs {{ evento.visitante }}', '{{ mercado.id }}')" class="border px-3 py-3.5 rounded-2xl transition-all duration-200 text-center flex flex-col justify-center items-center group shadow-2xs hover:shadow-sm
+                            {% if not mercado.activo %}
+                              opacity-50 cursor-not-allowed bg-slate-100 border-slate-200
+                            {% else %}
+                              bg-white border-slate-200/60 hover:border-indigo-500 hover:bg-indigo-50/30 active:scale-95
+                            {% endif %}">
                 <span
                   class="text-[10px] text-slate-500 font-bold group-hover:text-indigo-600 transition-colors uppercase tracking-widest mb-1">{{ seleccion.nombre }}</span>
                 <span id="cuota-val-{{ seleccion.id }}"
@@ -301,12 +313,24 @@
               <div class="flex justify-between items-center mb-3">
                 <span
                   class="text-[10px] font-black text-slate-400 uppercase tracking-widest bg-slate-50 px-2 py-1 rounded-md">{{ mercado.nombre }}</span>
-                {# En PROGRAMADOS no se muestra 'Resuelto' #}
+                {% if mercado.resuelto %}
+                <span id="suspendido-text-{{ mercado.id }}"
+                  class="text-[9px] font-black text-white bg-emerald-600 px-2 py-0.5 rounded-md uppercase tracking-widest flex items-center gap-1">🔒
+                  Resuelto</span>
+                {% elif not mercado.activo %}
+                <span id="suspendido-text-{{ mercado.id }}"
+                  class="text-[9px] font-black text-white bg-rose-500 px-2 py-0.5 rounded-md uppercase tracking-widest animate-pulse">Suspendido</span>
+                {% endif %}
               </div>
               <div class="grid grid-cols-3 gap-3">
                 {% for seleccion in mercado.selecciones.all %}
-                <button type="button" id="btn-seleccion-{{ seleccion.id }}"
-                  onclick="seleccionarCuota('{{ seleccion.id }}', '{{ seleccion.nombre }}', '{{ seleccion.cuota|stringformat:".2f" }}', '{{ evento.local }} vs {{ evento.visitante }}', '{{ mercado.id }}')" class="border px-3 py-3.5 rounded-2xl transition-all duration-200 text-center flex flex-col justify-center items-center group shadow-2xs hover:shadow-sm bg-white border-slate-200/60 hover:border-indigo-500 hover:bg-indigo-50/30 active:scale-95">
+                <button type="button" id="btn-seleccion-{{ seleccion.id }}" {% if not mercado.activo %}disabled{% endif %}
+                  onclick="seleccionarCuota('{{ seleccion.id }}', '{{ seleccion.nombre }}', '{{ seleccion.cuota|stringformat:".2f" }}', '{{ evento.local }} vs {{ evento.visitante }}', '{{ mercado.id }}')" class="border px-3 py-3.5 rounded-2xl transition-all duration-200 text-center flex flex-col justify-center items-center group shadow-2xs hover:shadow-sm
+                              {% if not mercado.activo %}
+                                opacity-50 cursor-not-allowed bg-slate-100 border-slate-200
+                              {% else %}
+                                bg-white border-slate-200/60 hover:border-indigo-500 hover:bg-indigo-50/30 active:scale-95
+                              {% endif %}">
                   <span
                     class="text-[10px] text-slate-500 font-bold group-hover:text-indigo-600 transition-colors uppercase tracking-widest mb-1">{{ seleccion.nombre }}</span>
                   <span id="cuota-val-{{ seleccion.id }}"
@@ -482,7 +506,8 @@
               </span>
               <div class="flex items-center gap-1.5">
                 {% if apuesta.usar_bono %}
-                <span class="font-black px-2 py-0.5 rounded-md text-[9px] uppercase tracking-widest bg-yellow-100 text-yellow-800 border border-yellow-200">
+                <span class="font-black px-1.5 py-0.5 rounded-md text-[8px] sm:text-[9px] uppercase tracking-widest bg-gradient-to-r from-amber-100 to-yellow-100 text-amber-800 border border-yellow-300 whitespace-nowrap flex items-center gap-1 shrink-0 shadow-sm">
+                  <i data-lucide="gift" class="w-2.5 h-2.5 text-amber-600"></i>
                   BONO BIENVENIDA
                 </span>
                 {% endif %}

@@ -9,12 +9,7 @@ from panel.models import Bono, BonoApuesta, AlertaAbuso
 
 
 def detect_risk_free_betting(usuario, bono=None):
-    """
-    Detecta apuestas sin riesgo: usuario cubre todos los resultados de un mismo mercado
-    garantizando ganancia independientemente del resultado.
-
-    Retorna lista de alertas generadas.
-    """
+    """Detecta apuestas sin riesgo (cubre todos los resultados)."""
     if bono is None:
         bonos_activos = Bono.objects.filter(
             usuario=usuario,
@@ -59,90 +54,78 @@ def detect_risk_free_betting(usuario, bono=None):
     return alertas_generadas
 
 
-def _analizar_cobertura(apuestas, bono, usuario):
-    """
-    Analiza si las apuestas en un mismo mercado cubren todos los resultados posibles.
-    """
+def _analizar_cobertura(bono, usuario):
+    """Analiza cobertura de mercado."""
     alertas = []
+    apuestas = Apuesta.objects.filter(
+        usuario=usuario,
+        usar_bono=True,
+        estado=EstadoApuesta.ACCEPTED,
+    ).prefetch_related(
+        "selecciones__seleccion__mercado__selecciones"
+    ).select_related("seleccion__mercado")
 
-    selecciones_cubiertas = set()
-    total_apostado = Decimal("0.0000")
-    payout_por_seleccion = {}
+    if not apuestas.exists():
+        return alertas
+
+    from collections import defaultdict
+    apuestas_por_mercado = defaultdict(list)
 
     for apuesta in apuestas:
-        selecciones = []
         if apuesta.tipo == "SIMPLE" and apuesta.seleccion:
-            selecciones = [apuesta.seleccion]
+            apuestas_por_mercado[apuesta.seleccion.mercado].append(apuesta)
         elif apuesta.tipo == "COMBINADA":
-            selecciones = [
-                det.seleccion
-                for det in apuesta.selecciones.select_related("seleccion").all()
-            ]
+            # Omitir combinadas por ahora
+            pass
 
-        for sel in selecciones:
-            selecciones_cubiertas.add(sel.id)
+    for mercado, apuestas_mercado in apuestas_por_mercado.items():
+        selecciones_cubiertas = set()
+        payout_por_seleccion = {}
+        total_apostado = Decimal("0.0000")
+
+        for apuesta in apuestas_mercado:
+            sel_id = apuesta.seleccion.id
+            selecciones_cubiertas.add(sel_id)
             payout_potencial = apuesta.monto * apuesta.cuota_fijada
-            if sel.id not in payout_por_seleccion:
-                payout_por_seleccion[sel.id] = Decimal("0.0000")
-            payout_por_seleccion[sel.id] += payout_potencial
+            if sel_id not in payout_por_seleccion:
+                payout_por_seleccion[sel_id] = Decimal("0.0000")
+            payout_por_seleccion[sel_id] += payout_potencial
+            total_apostado += apuesta.monto
 
-        total_apostado += apuesta.monto
+        total_selecciones = mercado.selecciones.filter(activo=True).count()
 
-    if not selecciones_cubiertas:
-        return alertas
+        if len(selecciones_cubiertas) >= total_selecciones and total_selecciones > 1:
+            ganancia_minima = min(payout_por_seleccion.values()) - total_apostado
+            umbral_abuso = bono.monto * Decimal("0.05")
 
-    mercado = None
-    for apuesta in apuestas:
-        if apuesta.tipo == "SIMPLE" and apuesta.seleccion:
-            mercado = apuesta.seleccion.mercado
-            break
-        elif apuesta.tipo == "COMBINADA":
-            primer_det = apuesta.selecciones.select_related("seleccion__mercado").first()
-            if primer_det:
-                mercado = primer_det.seleccion.mercado
-                break
-
-    if not mercado:
-        return alertas
-
-    total_selecciones = mercado.selecciones.filter(mercado__activo=True).count()
-
-    if len(selecciones_cubiertas) >= total_selecciones and total_selecciones > 1:
-        ganancia_minima = min(payout_por_seleccion.values()) - total_apostado
-
-        umbral_abuso = bono.monto * Decimal("0.05")
-
-        if ganancia_minima > umbral_abuso:
-            alerta = AlertaAbuso.objects.create(
-                usuario=usuario,
-                bono=bono,
-                tipo=TipoAlertaAbuso.RISK_FREE,
-                detalle={
-                    "evento_id": mercado.evento_id,
-                    "mercado_id": mercado.id,
-                    "mercado_nombre": mercado.nombre,
-                    "selecciones_cubiertas": list(selecciones_cubiertas),
-                    "total_apostado": str(total_apostado),
-                    "ganancia_minima": str(ganancia_minima.quantize(Decimal("0.0001"))),
-                    "payouts_por_seleccion": {
-                        str(k): str(v.quantize(Decimal("0.0001")))
-                        for k, v in payout_por_seleccion.items()
+            if ganancia_minima > umbral_abuso:
+                alerta = AlertaAbuso.objects.create(
+                    usuario=usuario,
+                    bono=bono,
+                    tipo=TipoAlertaAbuso.RISK_FREE,
+                    detalle={
+                        "evento_id": mercado.evento_id,
+                        "mercado_id": mercado.id,
+                        "mercado_nombre": mercado.nombre,
+                        "selecciones_cubiertas": list(selecciones_cubiertas),
+                        "total_apostado": str(total_apostado),
+                        "ganancia_minima": str(ganancia_minima.quantize(Decimal("0.0001"))),
+                        "payouts_por_seleccion": {
+                            str(k): str(v.quantize(Decimal("0.0001")))
+                            for k, v in payout_por_seleccion.items()
+                        },
                     },
-                },
-            )
-            alertas.append(alerta)
-
-            bono.estado = EstadoBono.REVOCADO
-            bono.save()
+                )
+                alertas.append(alerta)
+                bono.estado = EstadoBono.REVOCADO
+                bono.save()
+                break
 
     return alertas
 
 
 def detectar_arbitraje(usuario, bono=None):
-    """
-    Detecta arbitraje entre múltiples eventos/mercados donde el usuario
-    garantiza ganancia combinando apuestas de cuotas altas y bajas.
-    """
+    """Detecta arbitraje matemático."""
     if bono is None:
         bonos_activos = Bono.objects.filter(
             usuario=usuario,
@@ -159,46 +142,54 @@ def detectar_arbitraje(usuario, bono=None):
             estado=EstadoApuesta.ACCEPTED,
         ).distinct()
 
-        if apuestas.count() < 2:
-            continue
-
-        suma_probabilidades = Decimal("0.0000")
-        total_apostado = Decimal("0.0000")
-
+        from collections import defaultdict
+        apuestas_por_mercado = defaultdict(list)
+        
         for apuesta in apuestas:
-            cuota = apuesta.cuota_fijada
-            if cuota > 0:
-                probabilidad_implied = Decimal("1.0000") / cuota
-                suma_probabilidades += probabilidad_implied
-                total_apostado += apuesta.monto
+            if apuesta.tipo == "SIMPLE" and apuesta.seleccion:
+                mercado_id = apuesta.seleccion.mercado_id
+                apuestas_por_mercado[mercado_id].append(apuesta)
 
-        if suma_probabilidades < Decimal("1.0000"):
-            ganancia_garantizada = (Decimal("1.0000") - suma_probabilidades) * total_apostado
+        for mercado_id, apuestas_mercado in apuestas_por_mercado.items():
+            if len(apuestas_mercado) < 2:
+                continue
 
-            alerta = AlertaAbuso.objects.create(
-                usuario=usuario,
-                bono=bono_activo,
-                tipo=TipoAlertaAbuso.ARBITRAGE,
-                detalle={
-                    "suma_probabilidades": str(suma_probabilidades.quantize(Decimal("0.0004"))),
-                    "total_apostado": str(total_apostado.quantize(Decimal("0.0001"))),
-                    "ganancia_garantizada": str(ganancia_garantizada.quantize(Decimal("0.0001"))),
-                    "num_apuestas": apuestas.count(),
-                },
-            )
-            alertas.append(alerta)
+            suma_probabilidades = Decimal("0.0000")
+            total_apostado = Decimal("0.0000")
 
-            bono_activo.estado = EstadoBono.REVOCADO
-            bono_activo.save()
+            for apuesta in apuestas_mercado:
+                cuota = apuesta.cuota_fijada
+                if cuota > 0:
+                    probabilidad_implied = Decimal("1.0000") / cuota
+                    suma_probabilidades += probabilidad_implied
+                    total_apostado += apuesta.monto
+
+            if suma_probabilidades < Decimal("1.0000"):
+                ganancia_garantizada = (Decimal("1.0000") - suma_probabilidades) * total_apostado
+
+                alerta = AlertaAbuso.objects.create(
+                    usuario=usuario,
+                    bono=bono_activo,
+                    tipo=TipoAlertaAbuso.ARBITRAGE,
+                    detalle={
+                        "mercado_id": mercado_id,
+                        "suma_probabilidades": str(suma_probabilidades.quantize(Decimal("0.0004"))),
+                        "total_apostado": str(total_apostado.quantize(Decimal("0.0001"))),
+                        "ganancia_garantizada": str(ganancia_garantizada.quantize(Decimal("0.0001"))),
+                        "num_apuestas": len(apuestas_mercado),
+                    },
+                )
+                alertas.append(alerta)
+
+                bono_activo.estado = EstadoBono.REVOCADO
+                bono_activo.save()
+                break # Revocar una vez
 
     return alertas
 
 
 def run_abuse_check(usuario=None):
-    """
-    Ejecuta todas las detecciones de abuso.
-    Si usuario es None, revisa todos los usuarios con bonos activos.
-    """
+    """Ejecuta todas las detecciones de abuso."""
     if usuario:
         usuarios_con_bono = [usuario]
     else:

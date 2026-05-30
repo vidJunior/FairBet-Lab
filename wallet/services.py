@@ -33,7 +33,6 @@ def registrar_movimiento(
         ]
     )
 
-
 def validar_limites_deposito(user, perfil, monto):
     """Valida los límites acumulados diarios, semanales y mensuales de depósito."""
     ahora = timezone.now()

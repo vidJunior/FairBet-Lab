@@ -14,7 +14,7 @@ class MercadoSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Mercado
-        fields = ["id", "nombre", "activo", "selecciones"]
+        fields = ["id", "nombre", "activo", "resuelto", "selecciones"]
 
 
 class EventoSerializer(serializers.ModelSerializer):

@@ -1,0 +1,158 @@
+Challenge — FairBet Lab
+Simulador de apuestas deportivas con moneda virtual
+
+Contexto
+Construir una plataforma web educativa en la que los usuarios apuesten fichas virtuales (sin valor monetario real) sobre eventos deportivos, con énfasis en la integridad financiera, el tiempo real, el juego responsable y el cumplimiento normativo conforme a la Ley 31557 y su reglamento DS 005-2023-MINCETUR.
+
+Restricción explícita del reto:
+el sistema no integra pasarelas de pago reales, no convierte fichas a dinero, y debe mostrar en el footer:
+«Plataforma educativa con moneda virtual. No constituye una casa de apuestas.»
+
+Objetivos de aprendizaje
+• Diseño de un wallet con contabilidad de partida doble (cada movimiento = débito + crédito, saldo derivado, nunca almacenado).
+• Manejo riguroso de decimales y dinero (nada de float).
+• Máquinas de estado del ciclo de vida de una apuesta.
+• Concurrencia: bloqueo pesimista (select_for_update), idempotencia y prevención de doble gasto.
+• Tiempo real para cotizaciones (odds) y eventos en vivo.
+• Implementación de controles de juego responsable como requisito funcional.
+• Auditoría inmutable y trazabilidad regulatoria.
+
+Alcance funcional
+
+Nivel 1 — Núcleo obligatorio
+
+1. Registro y KYC (Conoce tu cliente) simulado
+• Validación de mayoría de edad (≥ 18) con fecha de nacimiento + DNI peruano (algoritmo de dígito verificador).
+• Estados de cuenta: pendiente_verificacion, verificado, bloqueado, autoexcluido.
+
+2. Wallet con partida doble
+• Modelo LedgerEntry con account, amount, direction (DEBIT/CREDIT), transaction_id.
+• Toda operación financiera crea como mínimo dos entradas balanceadas (la suma debe ser cero).
+• Cuentas: wallet_usuario, casa, apuestas_pendientes, bonos.
+• Operaciones: recarga simulada de fichas, retiro simulado, transferencia interna.
+• Saldo siempre se calcula por SUM(credits) − SUM(debits), nunca se guarda.
+
+3. Catálogo de eventos y mercados
+• Eventos deportivos con estados programado, en_vivo, finalizado, suspendido, anulado.
+• Mercados mínimos: 1X2 (gana local, empate, gana visitante).
+• Cuotas (odds) en formato decimal europeo (ej. 2.50), con margen del operador configurable.
+
+4. Apuesta simple
+• Usuario elige mercado + selección + monto.
+• Validaciones: saldo suficiente, cuenta verificada y no autoexcluida, evento aún no iniciado, monto dentro de límites min/max.
+• Al confirmar: bloqueo de fondos vía partida doble (wallet → apuestas_pendientes), creación de Bet en estado accepted.
+• Liquidación: cuando admin/sistema marca resultado, se calcula automáticamente payout = stake × odds y se acreditan ganancias o se libera la pérdida a la casa.
+
+5. Controles de juego responsable (obligatorios)
+• Límite diario, semanal y mensual de “depósito” de fichas, configurable por el usuario (solo se puede bajar instantáneamente; subirlo requiere cooldown de 24h).
+• Autoexclusión: temporal (7/30/90 días) o indefinida; el usuario no puede revertirla antes del tiempo.
+• Mensaje obligatorio de “consumo responsable” visible en todas las pantallas de apuesta.
+
+Nivel 2 — Avanzado
+
+6. Apuestas combinadas (acumuladoras)
+• Múltiples selecciones; cuota final = producto de cuotas individuales.
+• Si una falla, la combinada pierde.
+• Validación de selecciones mutuamente excluyentes (no se puede combinar “gana local” y “gana visitante” del mismo partido).
+
+7. Cuotas en tiempo real
+• Django Channels: canal por evento, actualización de odds en vivo.
+• Política de re-cotización: si la cuota cambió entre que el usuario abrió el ticket y confirmó, mostrar nueva cuota y exigir reconfirmación.
+
+8. Apuestas en vivo (in-play)
+• Apuestas mientras el evento está en_vivo, con cuotas dinámicas.
+• Suspensión automática de mercado en eventos críticos (gol, expulsión) por N segundos.
+
+9. Cash-out
+• El usuario puede cerrar anticipadamente una apuesta accepted a una cuota de cash-out calculada.
+• Fórmula sugerida: cashout = stake × odds_original / odds_actual × factor_casa.
+
+10. Mercados adicionales
+• Over/Under 2.5 goles, ambos equipos anotan (BTTS), handicap asiático simple.
+
+Nivel 3 — Compliance, auditoría y operación
+
+11. Auditoría inmutable
+• Tabla append-only de auditoría con encadenamiento por hash (hash_n = SHA256(hash_n-1 + payload_n)).
+• Cada bet, cada movimiento de wallet, cada cambio de odds queda registrado.
+• Endpoint admin de verificación de integridad de la cadena.
+
+12. Anti-fraude básico
+• Reglas: misma IP con N cuentas distintas, patrones de apuestas idénticas en grupo, depósitos inmediatos seguidos de cash-out, etc.
+• Sistema de alertas (SuspiciousActivity) para revisión manual del admin.
+
+13. Dashboard del operador
+• Métricas en vivo: GGR (Gross Gaming Revenue = stakes − payouts), exposure por evento (cuánto pierde la casa si gana cada selección), volumen de apuestas, número de usuarios activos.
+• Reporte mensual exportable estilo MINCETUR (formato CSV con columnas de la normativa).
+
+14. Bonos promocionales (opcional, +3 pts)
+• Bono de bienvenida con rollover (debe apostarse N veces antes de poder retirar).
+• Detección de abuso de bono (apuestas sin riesgo: muy alta cuota vs muy baja cuota cubriendo todos los resultados).
+
+Requerimientos técnicos
+
+Stack obligatorio
+• Django 5.x + DRF, PostgreSQL, Redis, Celery, Django Channels.
+• Decimal con precisión configurada (max_digits=18, decimal_places=4); prohibido usar float en montos.
+• Transacciones atómicas con select_for_update en todo movimiento de wallet.
+• Idempotency keys en endpoints de apuesta y de movimiento de fondos.
+
+Calidad de código
+• Cobertura mínima 80% en apps wallet y betting (estas son críticas).
+• Property-based testing con hypothesis para las invariantes financieras:
+◦ “La suma global de débitos y créditos siempre es cero.”
+◦ “Ningún wallet termina con saldo negativo.”
+◦ “El payout de una apuesta ganadora siempre es stake × odds con precisión exacta.”
+• Pruebas de concurrencia: simular N peticiones simultáneas y verificar que no haya doble gasto.
+
+Seguridad
+• Rate limiting agresivo en endpoints de apuesta y autenticación.
+• 2FA opcional para retiros simulados.
+• Logs estructurados (JSON) sin información sensible.
+
+Entregables — producto
+• Repositorio Git con README, docker-compose, seed de eventos y usuarios.
+• Diagrama ER + diagrama de la máquina de estados de Bet.
+• Documentación OpenAPI.
+• Reporte de cobertura.
+• Documento corto (2–3 páginas) explicando: cómo el diseño garantiza integridad financiera; qué decisiones de juego responsable se tomaron; qué requisitos de la Ley 31557 quedan cubiertos y cuáles no (autocrítica honesta).
+• Video demo (7–10 min).
+
+Entregables — proceso (evidencia de autoría)
+• Carpeta /docs/adr/ con mínimo 10 ADRs.
+• Carpeta /docs/sketches/ con bocetos a mano.
+• Historial de commits con Conventional Commits.
+• TDD evidente: commits test: antes de feat: para la lógica crítica.
+• Bitácora semanal individual.
+• Documento /docs/lecciones.md con mínimo 4 intentos fallidos por sprint.
+• Declaración de uso de IA en /docs/anti-ai-disclosure.md por cada integrante.
+
+Política de uso de herramientas de IA
+
+Permitido:
+• Pedir a la IA que explique un concepto, un mensaje de error o un fragmento de documentación.
+• Comparar enfoques.
+• Pedir revisión crítica de tu propio código.
+• Generar boilerplate trivial.
+
+No permitido:
+• Copiar y pegar bloques generados por IA al repositorio sin entenderlos y poder defenderlos línea por línea.
+• Encargar a la IA la implementación de la lógica de negocio crítica.
+• Ocultar el uso de IA en el archivo de declaración.
+
+Obligatorio:
+• Cada integrante mantiene su propia /docs/anti-ai-disclosure.md.
+• Cuando un commit contiene asistencia significativa de IA, marcarlo en el mensaje con el sufijo [ai-assisted].
+
+Reglas de commits
+• Conventional Commits: feat:, fix:, refactor:, test:, docs:, chore:, perf:
+• Atomicidad: un cambio lógico por cada commit.
+• Distribución temporal: commits a lo largo del periodo.
+• Co-autoría: indicar el nro de grupo y sus integrantes.
+• Marca [ai-assisted] cuando el commit contenga asistencia significativa de IA.
+
+Defensa oral final
+20 minutos por equipo al cierre del challenge.
+
+Cálculo de la nota individual
+Nota_individual = Nota_equipo × Factor_defensa

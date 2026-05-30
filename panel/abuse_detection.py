@@ -3,9 +3,10 @@ from collections import defaultdict
 
 from django.db.models import Q
 
-from config.choices import EstadoApuesta, TipoAlertaAbuso, EstadoBono
-from betting.models import Apuesta, ApuestaSeleccion
+from config.choices import EstadoApuesta, TipoAlertaAbuso, EstadoBono, Direccion
+from betting.models import Apuesta, ApuestaSeleccion, Seleccion
 from panel.models import Bono, BonoApuesta, AlertaAbuso
+from wallet.models import LedgerEntry
 
 
 def detect_risk_free_betting(usuario, bono=None):
@@ -194,6 +195,114 @@ def detectar_arbitraje(usuario, bono=None):
     return alertas
 
 
+def detect_matched_betting(usuario, bono=None):
+    """
+    Detecta matched betting: el usuario financia apuestas con bono en un mercado
+    y simultáneamente apuesta en contra con fondos reales en el mismo mercado,
+    garantizando ganancia sin riesgo.
+    """
+    if bono is None:
+        bonos_activos = Bono.objects.filter(
+            usuario=usuario,
+            estado=EstadoBono.ACTIVO,
+        )
+    else:
+        bonos_activos = [bono]
+
+    alertas = []
+
+    for bono_activo in bonos_activos:
+        apuestas_con_bono = Apuesta.objects.filter(
+            usuario=usuario,
+            usar_bono=True,
+            estado=EstadoApuesta.ACCEPTED,
+        )
+        apuestas_sin_bono = Apuesta.objects.filter(
+            usuario=usuario,
+            usar_bono=False,
+            estado=EstadoApuesta.ACCEPTED,
+        )
+
+        if not apuestas_con_bono.exists() or not apuestas_sin_bono.exists():
+            continue
+
+        selecciones_bono = _obtener_selecciones_ids(apuestas_con_bono)
+        selecciones_sin_bono = _obtener_selecciones_ids(apuestas_sin_bono)
+
+        for sel_bono_id in selecciones_bono:
+            sel_bono = Seleccion.objects.select_related("mercado__evento").get(pk=sel_bono_id)
+            mercado = sel_bono.mercado
+            total_mercado = mercado.selecciones.count()
+
+            selecciones_contrarias = set()
+            for sel_sin_id in selecciones_sin_bono:
+                sel_sin = Seleccion.objects.select_related("mercado__evento").get(pk=sel_sin_id)
+                if sel_sin.mercado_id == mercado.id and sel_sin.id != sel_bono_id:
+                    selecciones_contrarias.add(sel_sin_id)
+
+            if len(selecciones_contrarias) + 1 >= total_mercado and total_mercado > 1:
+                total_apostado_bono = sum(
+                    a.monto for a in apuestas_con_bono
+                    if _apuesta_tiene_seleccion(a, sel_bono_id)
+                )
+                total_apostado_sin_bono = sum(
+                    a.monto for a in apuestas_sin_bono
+                    if any(_apuesta_tiene_seleccion(a, sid) for sid in selecciones_contrarias)
+                )
+
+                payout_bono = sum(
+                    a.monto * a.cuota_fijada for a in apuestas_con_bono
+                    if _apuesta_tiene_seleccion(a, sel_bono_id)
+                )
+
+                ganancia_garantizada = payout_bono - total_apostado_bono - total_apostado_sin_bono
+
+                if ganancia_garantizada > bono_activo.monto * Decimal("0.05"):
+                    alerta = AlertaAbuso.objects.create(
+                        usuario=usuario,
+                        bono=bono_activo,
+                        tipo=TipoAlertaAbuso.MATCHED_BETTING,
+                        detalle={
+                            "evento_id": mercado.evento_id,
+                            "evento_nombre": f"{mercado.evento.local} vs {mercado.evento.visitante}",
+                            "mercado_id": mercado.id,
+                            "mercado_nombre": mercado.nombre,
+                            "seleccion_bono_id": sel_bono_id,
+                            "seleccion_bono_nombre": sel_bono.nombre,
+                            "selecciones_contrarias": list(selecciones_contrarias),
+                            "total_apostado_bono": str(total_apostado_bono.quantize(Decimal("0.0001"))),
+                            "total_apostado_sin_bono": str(total_apostado_sin_bono.quantize(Decimal("0.0001"))),
+                            "ganancia_garantizada": str(ganancia_garantizada.quantize(Decimal("0.0001"))),
+                        },
+                    )
+                    alertas.append(alerta)
+
+                    bono_activo.estado = EstadoBono.REVOCADO
+                    bono_activo.save()
+                    break
+
+    return alertas
+
+
+def _apuesta_tiene_seleccion(apuesta, seleccion_id):
+    if apuesta.tipo == "SIMPLE" and apuesta.seleccion:
+        return apuesta.seleccion_id == seleccion_id
+    elif apuesta.tipo == "COMBINADA":
+        return apuesta.selecciones.filter(seleccion_id=seleccion_id).exists()
+    return False
+
+
+def _obtener_selecciones_ids(apuestas):
+    ids = set()
+    for apuesta in apuestas:
+        if apuesta.tipo == "SIMPLE" and apuesta.seleccion:
+            ids.add(apuesta.seleccion_id)
+        elif apuesta.tipo == "COMBINADA":
+            for det in apuesta.selecciones.all():
+                ids.add(det.seleccion_id)
+    return ids
+
+
 def run_abuse_check(usuario=None):
     """
     Ejecuta todas las detecciones de abuso.
@@ -215,5 +324,6 @@ def run_abuse_check(usuario=None):
         for bono in bonos_activos:
             todas_alertas.extend(detect_risk_free_betting(u, bono))
             todas_alertas.extend(detectar_arbitraje(u, bono))
+            todas_alertas.extend(detect_matched_betting(u, bono))
 
     return todas_alertas

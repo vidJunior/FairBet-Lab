@@ -120,7 +120,7 @@ class BonosAPIView(APIView):
         rollover_multiplier = request.data.get("rollover_multiplier", 5)
         expira = request.data.get("expira")
 
-        if not monto or not expira:
+        if monto is None or not expira:
             return Response({"error": "El monto y la fecha de expiración son obligatorios."}, status=status.HTTP_400_BAD_REQUEST)
 
         # Parsear fecha de expiración
@@ -129,7 +129,14 @@ class BonosAPIView(APIView):
         if not expira_dt:
             return Response({"error": "Formato de fecha de expiración inválido."}, status=status.HTTP_400_BAD_REQUEST)
 
-        if tipo == "recarga":
+        if tipo == "manual":
+            serializer = BonoCreateSerializer(data=request.data)
+            if not serializer.is_valid():
+                return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+            bono = serializer.save()
+            return Response({"message": f"Bono individual creado para {bono.usuario.username}.", "bono_id": str(bono.id)}, status=status.HTTP_201_CREATED)
+
+        elif tipo == "recarga":
             from panel.services import crear_bono_recarga_masivo
             bonos = crear_bono_recarga_masivo(monto, rollover_multiplier, expira_dt)
             return Response({"message": f"Bono de recarga creado con éxito para {len(bonos)} usuarios."}, status=status.HTTP_201_CREATED)

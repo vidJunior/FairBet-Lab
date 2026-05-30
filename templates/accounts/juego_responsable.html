@@ -9,7 +9,7 @@
   <div class="space-y-2">
     {% for message in messages %}
     <div class="p-3.5 rounded-lg text-sm flex items-start gap-3
-      {% if message.tags == 'error' %}bg-red-50 border border-red-200 text-red-800
+      {% if message.tags == 'error' %}bg-rose-50 border border-rose-200 text-rose-800
       {% else %}bg-emerald-50 border border-emerald-200 text-emerald-800{% endif %}">
       <i data-lucide="{% if message.tags == 'error' %}alert-circle{% else %}check-circle{% endif %}"
          class="w-4 h-4 shrink-0 mt-0.5"></i>
@@ -67,7 +67,7 @@
     </div>
 
     <!-- Límites Activos -->
-    <div class="bg-slate-50 border border-slate-150 rounded-xl p-4 grid grid-cols-3 gap-4 text-center">
+    <div class="bg-slate-50 border border-slate-200 rounded-xl p-4 grid grid-cols-3 gap-4 text-center">
       <div>
         <span class="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">Diario</span>
         <span class="text-sm font-semibold text-slate-800">{{ perfil.limite_deposito_diario|stringformat:".2f" }} fichas</span>
@@ -115,13 +115,13 @@
   <!-- Autoexclusión -->
   <div class="bg-white border border-slate-200 rounded-xl p-6 shadow-sm space-y-4">
     <div class="flex items-center gap-2 border-b border-slate-100 pb-3">
-      <i data-lucide="user-x" class="w-5 h-5 text-red-600"></i>
+      <i data-lucide="user-x" class="w-5 h-5 text-rose-600"></i>
       <h2 class="text-base font-bold text-slate-800">Autoexclusión Voluntaria</h2>
     </div>
 
-    <div class="p-4 bg-red-50 border border-red-150 rounded-xl text-red-800 text-xs space-y-2 leading-relaxed">
+    <div class="p-4 bg-red-50 border border-red-200 rounded-xl text-red-800 text-xs space-y-2 leading-relaxed">
       <h4 class="font-bold flex items-center gap-1.5">
-        <i data-lucide="alert-triangle" class="w-4 h-4 text-red-600"></i>
+        <i data-lucide="alert-triangle" class="w-4 h-4 text-rose-600"></i>
         ¡ATENCIÓN! La autoexclusión es irreversible
       </h4>
       <p>
@@ -138,7 +138,7 @@
         {{ autoexclusion_form.tipo_autoexclusion }}
       </div>
 
-      <button type="submit" class="w-full bg-red-600 hover:bg-red-700 text-white font-medium px-4 py-2.5 rounded-lg text-sm transition-colors flex items-center justify-center gap-2 cursor-pointer">
+      <button type="submit" class="w-full bg-rose-600 hover:bg-rose-700 text-white font-medium px-4 py-2.5 rounded-lg text-sm transition-colors flex items-center justify-center gap-2 cursor-pointer">
         <i data-lucide="ban" class="w-4 h-4"></i>
         Confirmar Autoexclusión
       </button>

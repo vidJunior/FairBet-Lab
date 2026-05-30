@@ -18,7 +18,7 @@ class Bono(models.Model):
     tipo = models.CharField(max_length=20, choices=TipoBono.choices)
     monto = models.DecimalField(max_digits=10, decimal_places=4)
     rollover_multiplier = models.DecimalField(
-        max_digits=4,
+        max_digits=6,
         decimal_places=2,
         default=Decimal("5.00"),
         help_text="Veces que debe apostarse el monto antes de retirar",
@@ -154,7 +154,7 @@ class CodigoBono(models.Model):
     codigo = models.CharField(max_length=50, unique=True, help_text="Código promocional único")
     monto = models.DecimalField(max_digits=10, decimal_places=4)
     rollover_multiplier = models.DecimalField(
-        max_digits=4,
+        max_digits=6,
         decimal_places=2,
         default=Decimal("5.00"),
         help_text="Multiplicador de rollover para el bono",

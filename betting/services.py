@@ -6,12 +6,41 @@ from django.utils import timezone
 from asgiref.sync import async_to_sync
 from channels.layers import get_channel_layer
 
-from config.choices import TipoCuenta, EstadoPerfil, EstadoEvento, EstadoApuesta
+from config.choices import TipoCuenta, EstadoPerfil, EstadoEvento, EstadoApuesta, EstadoBono
 from wallet.models import LedgerEntry
 from wallet.services import transferencia_interna, registrar_movimiento
 from betting.models import Evento, Seleccion, Apuesta, ApuestaSeleccion, Mercado
 from betting.tasks import reactivar_mercados_evento
 from panel.rollover import actualizar_rollover_apuesta
+from panel.models import Bono
+
+def determinar_cuenta_destino(user, usar_bono):
+    """
+    Determina si las ganancias/reembolsos deben ir a bonos o dinero real.
+    Si el bono fue revocado, las ganancias se confiscan (CASA).
+    """
+    if not usar_bono:
+        return TipoCuenta.WALLET_USUARIO
+        
+    tiene_activo = Bono.objects.filter(usuario=user, estado=EstadoBono.ACTIVO).exists()
+    if tiene_activo:
+        return TipoCuenta.BONOS
+        
+    tiene_revocado = Bono.objects.filter(usuario=user, estado=EstadoBono.REVOCADO).exists()
+    if tiene_revocado:
+        return TipoCuenta.CASA
+        
+    return TipoCuenta.WALLET_USUARIO
+
+def notificar_usuario_actualizacion(user_id):
+    """Envía un evento WebSocket al usuario para actualizar su vista (billetera/apuestas)"""
+    from asgiref.sync import async_to_sync
+    from channels.layers import get_channel_layer
+    channel_layer = get_channel_layer()
+    async_to_sync(channel_layer.group_send)(
+        f"user_{user_id}",
+        {"type": "user_update", "data": {"type": "WALLET_UPDATE", "msg": "Tus apuestas han sido liquidadas"}}
+    )
 
 
 def obtener_seleccion_ganadora_1x2(evento):
@@ -452,8 +481,11 @@ def liquidar_apuestas_evento(evento_id, seleccion_ganadora_id=None):
         tipo="SIMPLE", seleccion__mercado__evento=evento, estado=EstadoApuesta.ACCEPTED
     ).select_related("usuario", "seleccion__mercado")
 
+    usuarios_afectados = set()
+
     for apuesta in apuestas_simples:
         user = apuesta.usuario
+        usuarios_afectados.add(user.id)
         stake = apuesta.monto
 
         LedgerEntry.objects.select_for_update().filter(
@@ -461,12 +493,11 @@ def liquidar_apuestas_evento(evento_id, seleccion_ganadora_id=None):
         )
 
         if evento.estado == EstadoEvento.ANULADO:
-            cuenta_destino = (
-                TipoCuenta.BONOS if apuesta.usar_bono else TipoCuenta.WALLET_USUARIO
-            )
-            transferencia_interna(
-                user, TipoCuenta.APUESTAS_PENDIENTES, cuenta_destino, stake
-            )
+            cuenta_destino = determinar_cuenta_destino(user, apuesta.usar_bono)
+            if cuenta_destino != TipoCuenta.CASA:
+                transferencia_interna(
+                    user, TipoCuenta.APUESTAS_PENDIENTES, cuenta_destino, stake
+                )
             apuesta.estado = EstadoApuesta.CANCELLED
             apuesta.save()
             continue
@@ -477,12 +508,11 @@ def liquidar_apuestas_evento(evento_id, seleccion_ganadora_id=None):
             registrar_movimiento(
                 tid, user, TipoCuenta.APUESTAS_PENDIENTES, None, TipoCuenta.CASA, stake
             )
-            cuenta_destino = (
-                TipoCuenta.BONOS if apuesta.usar_bono else TipoCuenta.WALLET_USUARIO
-            )
-            registrar_movimiento(
-                tid, None, TipoCuenta.CASA, user, cuenta_destino, payout
-            )
+            cuenta_destino = determinar_cuenta_destino(user, apuesta.usar_bono)
+            if cuenta_destino != TipoCuenta.CASA:
+                registrar_movimiento(
+                    tid, None, TipoCuenta.CASA, user, cuenta_destino, payout
+                )
             apuesta.estado = EstadoApuesta.WON
             apuesta.save()
             actualizar_rollover_apuesta(apuesta)
@@ -509,6 +539,7 @@ def liquidar_apuestas_evento(evento_id, seleccion_ganadora_id=None):
 
     for combinada in apuestas_combinadas:
         user = combinada.usuario
+        usuarios_afectados.add(user.id)
         detalles = combinada.detalles.select_related("seleccion__mercado__evento")
 
         estado_final = EstadoApuesta.WON
@@ -566,16 +597,21 @@ def liquidar_apuestas_evento(evento_id, seleccion_ganadora_id=None):
                 TipoCuenta.CASA,
                 combinada.monto,
             )
-            cuenta_destino = (
-                TipoCuenta.BONOS if combinada.usar_bono else TipoCuenta.WALLET_USUARIO
-            )
-            registrar_movimiento(
-                tid, None, TipoCuenta.CASA, user, cuenta_destino, payout
-            )
+            cuenta_destino = determinar_cuenta_destino(user, combinada.usar_bono)
+            if cuenta_destino != TipoCuenta.CASA:
+                registrar_movimiento(
+                    tid, None, TipoCuenta.CASA, user, cuenta_destino, payout
+                )
             combinada.estado = EstadoApuesta.WON
             combinada.cuota_fijada = cuota_ajustada
             combinada.save()
             actualizar_rollover_apuesta(combinada)
+
+    def _notificar_usuarios():
+        for uid in usuarios_afectados:
+            notificar_usuario_actualizacion(uid)
+
+    transaction.on_commit(_notificar_usuarios)
 
 
 @transaction.atomic
@@ -800,71 +836,74 @@ def recalcular_cuotas_dinamicas(evento):
 
 @transaction.atomic
 def liquidar_apuestas_resueltas_temprano(evento):
-    """Paga BTTS y Más/Menos antes de que termine el partido."""
+    """Liquida apuestas garantizadas (BTTS y Más/Menos) antes del final del partido."""
     goles_loc = evento.goles_local
     goles_vis = evento.goles_visitante
     total_goles = goles_loc + goles_vis
 
     selecciones_ganadas = []
     selecciones_perdidas = []
-    mercados_a_cerrar = set()
 
     if goles_loc > 0 and goles_vis > 0:
-        # Ambos anotan: ya ganaron Sí y perdieron No
-        sels_btts_si = list(
-            Seleccion.objects.filter(
-                mercado__evento=evento,
-                mercado__nombre__icontains="ambos equipos anotan",
-                mercado__resuelto=False,
-                nombre__in=["Sí", "SI"],
-            ).select_related("mercado")
+        selecciones_ganadas.extend(
+            list(
+                Seleccion.objects.filter(
+                    mercado__evento=evento,
+                    mercado__nombre__icontains="ambos equipos anotan",
+                    nombre__in=["Sí", "SI"],
+                )
+            )
         )
-        sels_btts_no = list(
-            Seleccion.objects.filter(
-                mercado__evento=evento,
-                mercado__nombre__icontains="ambos equipos anotan",
-                mercado__resuelto=False,
-                nombre__icontains="no",
-            ).select_related("mercado")
+        selecciones_perdidas.extend(
+            list(
+                Seleccion.objects.filter(
+                    mercado__evento=evento,
+                    mercado__nombre__icontains="ambos equipos anotan",
+                    nombre__icontains="no",
+                )
+            )
         )
-        selecciones_ganadas.extend(sels_btts_si)
-        selecciones_perdidas.extend(sels_btts_no)
-        for sel in sels_btts_si + sels_btts_no:
-            mercados_a_cerrar.add(sel.mercado_id)
 
     if total_goles >= 3:
-        # Más de 2.5 goles asegurado: ganaron Más y perdieron Menos
-        sels_mas = list(
-            Seleccion.objects.filter(
-                mercado__evento=evento,
-                mercado__nombre__icontains="2.5",
-                mercado__resuelto=False,
-                nombre__icontains="más",
-            ).select_related("mercado")
+        selecciones_ganadas.extend(
+            list(
+                Seleccion.objects.filter(
+                    mercado__evento=evento,
+                    mercado__nombre__icontains="2.5",
+                    nombre__icontains="2.5",
+                ).exclude(nombre__icontains="menos")
+            )
         )
-        sels_menos = list(
-            Seleccion.objects.filter(
-                mercado__evento=evento,
-                mercado__nombre__icontains="2.5",
-                mercado__resuelto=False,
-                nombre__icontains="menos",
-            ).select_related("mercado")
+        selecciones_perdidas.extend(
+            list(
+                Seleccion.objects.filter(
+                    mercado__evento=evento,
+                    mercado__nombre__icontains="2.5",
+                    nombre__icontains="menos",
+                )
+            )
         )
-        selecciones_ganadas.extend(sels_mas)
-        selecciones_perdidas.extend(sels_menos)
-        for sel in sels_mas + sels_menos:
-            mercados_a_cerrar.add(sel.mercado_id)
 
     if not selecciones_ganadas and not selecciones_perdidas:
         return
 
-    # Pagar apuestas simples ganadas
+    # Bloquear los mercados resueltos tempranamente
+    mercados_ids = set()
+    for s in selecciones_ganadas + selecciones_perdidas:
+        mercados_ids.add(s.mercado_id)
+    if mercados_ids:
+        Mercado.objects.filter(id__in=mercados_ids).update(resuelto=True, activo=False)
+
+    usuarios_afectados = set()
+
+    # Simples
     for sel in selecciones_ganadas:
         apuestas = Apuesta.objects.filter(
             tipo="SIMPLE", seleccion=sel, estado=EstadoApuesta.ACCEPTED
         ).select_related("usuario")
         for apuesta in apuestas:
             user = apuesta.usuario
+            usuarios_afectados.add(user.id)
             stake = apuesta.monto
             LedgerEntry.objects.select_for_update().filter(
                 usuario=user, cuenta=TipoCuenta.APUESTAS_PENDIENTES
@@ -874,24 +913,22 @@ def liquidar_apuestas_resueltas_temprano(evento):
             registrar_movimiento(
                 tid, user, TipoCuenta.APUESTAS_PENDIENTES, None, TipoCuenta.CASA, stake
             )
-            # Pagar al origen correspondiente (bono o dinero real)
-            cuenta_destino = (
-                TipoCuenta.BONOS if apuesta.usar_bono else TipoCuenta.WALLET_USUARIO
-            )
-            registrar_movimiento(
-                tid, None, TipoCuenta.CASA, user, cuenta_destino, payout
-            )
+            cuenta_destino = determinar_cuenta_destino(user, apuesta.usar_bono)
+            if cuenta_destino != TipoCuenta.CASA:
+                registrar_movimiento(
+                    tid, None, TipoCuenta.CASA, user, cuenta_destino, payout
+                )
             apuesta.estado = EstadoApuesta.WON
             apuesta.save()
             actualizar_rollover_apuesta(apuesta)
 
-    # Liquidar apuestas simples perdidas
     for sel in selecciones_perdidas:
         apuestas = Apuesta.objects.filter(
             tipo="SIMPLE", seleccion=sel, estado=EstadoApuesta.ACCEPTED
         ).select_related("usuario")
         for apuesta in apuestas:
             user = apuesta.usuario
+            usuarios_afectados.add(user.id)
             stake = apuesta.monto
             LedgerEntry.objects.select_for_update().filter(
                 usuario=user, cuenta=TipoCuenta.APUESTAS_PENDIENTES
@@ -904,13 +941,14 @@ def liquidar_apuestas_resueltas_temprano(evento):
             apuesta.save()
             actualizar_rollover_apuesta(apuesta)
 
-    # Liquidar combinadas perdidas
+    # Combinadas perdedoras
     for sel in selecciones_perdidas:
         combinadas = Apuesta.objects.filter(
             tipo="COMBINADA", selecciones=sel, estado=EstadoApuesta.ACCEPTED
         ).distinct()
         for combinada in combinadas:
             user = combinada.usuario
+            usuarios_afectados.add(user.id)
             LedgerEntry.objects.select_for_update().filter(
                 usuario=user, cuenta=TipoCuenta.APUESTAS_PENDIENTES
             )
@@ -927,25 +965,8 @@ def liquidar_apuestas_resueltas_temprano(evento):
             combinada.save()
             actualizar_rollover_apuesta(combinada)
 
-    # Desactivar mercados ya resueltos
-    if mercados_a_cerrar:
-        Mercado.objects.filter(id__in=mercados_a_cerrar).update(
-            resuelto=True, activo=False
-        )
-        # WS: Notificar cierre de mercados
-        channel_layer = get_channel_layer()
-        if channel_layer:
-            async_to_sync(channel_layer.group_send)(
-                "live_odds",
-                {
-                    "type": "odds_update",
-                    "data": {
-                        "tipo_evento": "MERCADOS_RESUELTOS_TEMPRANO",
-                        "evento_id": evento.id,
-                        "mercados_cerrados": list(mercados_a_cerrar),
-                    },
-                },
-            )
+    for uid in usuarios_afectados:
+        notificar_usuario_actualizacion(uid)
 
 
 @transaction.atomic
@@ -956,10 +977,10 @@ def recalcular_cuotas_por_goles(evento, goles_local_nuevos, goles_visitante_nuev
     liquidar_apuestas_resueltas_temprano(evento)
     cuotas_data = recalcular_cuotas_dinamicas(evento)
 
-    # Suspender mercados durante recálculo
+    # Suspender mercados durante el recálculo
     Mercado.objects.filter(evento=evento).update(activo=False)
 
-    # WS: Notificar suspensión
+    # Notificar suspensión vía WebSocket
     channel_layer = get_channel_layer()
     if channel_layer:
         async_to_sync(channel_layer.group_send)(
@@ -994,7 +1015,7 @@ def registrar_evento_critico(evento_id, tipo_evento_critico):
         evento.goles_visitante += 1
 
     evento.estado = EstadoEvento.EN_VIVO
-    evento.save()  # Dispara recalcular_cuotas_por_goles via save()
+    evento.save()  # dispara recalcular_cuotas_por_goles via Evento.save()
 
     return evento
 
@@ -1027,7 +1048,7 @@ def crear_evento_operador(local, visitante, fecha_inicio):
         mercado=mercado, nombre="Visitante", cuota=Decimal("2.5000")
     )
 
-    # WS: Notificar nuevo evento
+    # Notificar al catálogo en tiempo real
     channel_layer = get_channel_layer()
     if channel_layer:
         async_to_sync(channel_layer.group_send)(
@@ -1050,7 +1071,7 @@ def crear_evento_operador(local, visitante, fecha_inicio):
 def actualizar_evento_operador(
     evento_id, goles_local, goles_visitante, estado, minuto_actual=0, periodo="1T", fecha_inicio=None
 ):
-    """Actualiza datos del evento y liquida apuestas si finaliza."""
+    """Actualiza marcador, minuto y estado; liquida apuestas si el evento finaliza o se anula."""
     from betting.models import Evento
     from config.choices import EstadoEvento
 
@@ -1067,25 +1088,30 @@ def actualizar_evento_operador(
     if fecha_inicio is not None:
         evento.fecha_inicio = fecha_inicio
 
-    # Evitar conflicto de finalización antes de liquidar
+    # No marcar FINALIZADO antes de liquidar para evitar conflictos en validaciones
     if estado == EstadoEvento.FINALIZADO:
         evento.estado = previo_estado
         evento.minuto_actual = 90
         evento.periodo = "FINALIZADO"
+    elif estado == EstadoEvento.PROGRAMADO:
+        evento.estado = estado
+        evento.minuto_actual = 0
+        evento.periodo = "1T"
+        evento.goles_local = 0
+        evento.goles_visitante = 0
+        # Resetear mercados si se vuelve a PROGRAMADO
+        evento.mercados.update(resuelto=False, activo=True)
     else:
         evento.estado = estado
         evento.minuto_actual = int(minuto_actual) if minuto_actual is not None else 0
         evento.periodo = periodo
     evento.save()
 
-    # Resetear mercados si se reprograma
-    if estado == EstadoEvento.PROGRAMADO and previo_estado != EstadoEvento.PROGRAMADO:
-        evento.mercados.update(resuelto=False, activo=True)
-        evento.goles_local = 0
-        evento.goles_visitante = 0
-        Evento.objects.filter(pk=evento.pk).update(goles_local=0, goles_visitante=0)
+    # Pagar apuestas de mercados resueltos tempranamente (BTTS, Más/Menos) si hubo goles
+    if estado == EstadoEvento.EN_VIVO:
+        liquidar_apuestas_resueltas_temprano(evento)
 
-    # WS: Enviar marcador y cuotas actualizadas
+    # Broadcast marcador y cuotas actualizadas
     channel_layer = get_channel_layer()
     if channel_layer:
         periodo_display = (
@@ -1094,6 +1120,20 @@ def actualizar_evento_operador(
             else f"{evento.minuto_actual}' - {evento.periodo}"
         )
         nuevas_cuotas = recalcular_cuotas_dinamicas(evento)
+        
+        # Enviar actualización de catálogo para refrescar los locks (candados) de los mercados
+        async_to_sync(channel_layer.group_send)(
+            "live_odds",
+            {
+                "type": "odds_update",
+                "data": {
+                    "tipo_evento": "CATALOGO_ACTUALIZADO",
+                    "motivo": "ACTUALIZACION_OPERADOR",
+                    "evento_id": evento.id,
+                },
+            },
+        )
+        
         async_to_sync(channel_layer.group_send)(
             "live_odds",
             {
@@ -1117,7 +1157,7 @@ def actualizar_evento_operador(
     ] and previo_estado not in [EstadoEvento.FINALIZADO, EstadoEvento.ANULADO]:
         liquidar_apuestas_evento(evento_id)
 
-    # WS: Notificar cambio de pestaña si cambia el estado
+    # Notificar cambio de pestaña en catálogo cuando cambia el estado relevante
     estados_que_cambian_pestana = [
         EstadoEvento.EN_VIVO,
         EstadoEvento.FINALIZADO,

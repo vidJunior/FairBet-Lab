@@ -91,5 +91,32 @@
 
     <!-- Extra JS -->
     {% block extra_js %}{% endblock %}
+
+    {% if user.is_authenticated %}
+    <script>
+      (function() {
+        const wsScheme = window.location.protocol === "https:" ? "wss" : "ws";
+        const userSocket = new WebSocket(`${wsScheme}://${window.location.host}/ws/live-odds/`);
+        
+        userSocket.onmessage = function (e) {
+          const data = JSON.parse(e.data);
+          if (data.type === "WALLET_UPDATE") {
+            // Show a simple non-blocking alert or reload
+            console.log("Actualización de billetera/apuesta recibida:", data.msg);
+            
+            // Only auto-reload if we are on historial or billetera where inputs are less likely to be interrupted
+            const path = window.location.pathname;
+            if (path.includes("wallet") || path.includes("historial") || path.includes("betting") || path.includes("catalogo")) {
+               // We could do a soft UI update, but reloading guarantees fresh data
+               // To avoid interrupting the user right when they click, we add a tiny delay
+               setTimeout(() => {
+                 window.location.reload();
+               }, 1500);
+            }
+          }
+        };
+      })();
+    </script>
+    {% endif %}
   </body>
 </html>

@@ -8,10 +8,10 @@ from betting.models import Mercado
 
 @shared_task
 def reactivar_mercados_evento(evento_id):
-    # cooldown de suspension
+    # Cooldown
     time.sleep(15)
 
-    # Verificar si el evento fue finalizado o anulado durante la suspensión
+    # Verificar estado del evento
     from betting.models import Evento
     from config.choices import EstadoEvento
     try:
@@ -105,19 +105,18 @@ def simular_minuto_partidos_en_vivo():
             elif partido.minuto_actual <= 89:
                 partido.periodo = "2T"
             else:
-                # Primero guardar minuto 90 sin cambiar a FINALIZADO
-                # para que liquidar_apuestas_evento no lance ValidationError
+                # Guardar minuto 90 temporalmente para evitar ValidationError
                 partido.minuto_actual = 90
                 partido.periodo = "FT"
                 partido.save()
 
-                # Liquidar apuestas (esta función cambia el estado a FINALIZADO internamente)
+                # Liquidar apuestas (cambia a FINALIZADO)
                 try:
                     liquidar_apuestas_evento(partido.id, None)
                 except Exception as e:
                     print(f"Error al liquidar evento {partido.id}: {e}")
 
-                # Asegurar que el estado final es FINALIZADO y el periodo correcto
+                # Asegurar estado a FINALIZADO
                 partido.refresh_from_db()
                 if partido.estado != EstadoEvento.FINALIZADO:
                     partido.estado = EstadoEvento.FINALIZADO
@@ -142,7 +141,7 @@ def simular_minuto_partidos_en_vivo():
                     )
                 continue
 
-            # random goals (probabilidad del 2% y tope máximo de 5 goles por partido)
+            # Generar goles aleatorios (probabilidad 2%, max 5 total)
             goles_totales = partido.goles_local + partido.goles_visitante
             gol_local = False
             gol_visitante = False
@@ -164,7 +163,7 @@ def simular_minuto_partidos_en_vivo():
             # Guardar el estado del partido
             partido.save()
 
-            # Recalcular todas las cuotas de forma dinámica según el minuto actual y goles
+            # Recalcular cuotas dinámicamente
             from betting.services import (
                 recalcular_cuotas_dinamicas,
                 liquidar_apuestas_resueltas_temprano,
@@ -172,8 +171,7 @@ def simular_minuto_partidos_en_vivo():
 
             nuevas_cuotas = recalcular_cuotas_dinamicas(partido)
 
-            # Liquidar automáticamente apuestas ya resueltas matemáticamente
-            # (ej: "Ambos Anotan Sí" cuando ambos ya anotaron, "Más de 2.5" con 3+ goles)
+            # Liquidar mercados resueltos matemáticamente (ej. over 2.5)
             liquidar_apuestas_resueltas_temprano(partido)
 
             channel_layer = get_channel_layer()
@@ -183,6 +181,20 @@ def simular_minuto_partidos_en_vivo():
                     if partido.periodo == "ET"
                     else f"{partido.minuto_actual}' - {partido.periodo}"
                 )
+                
+                if goles_loc_nuevos > 0 or goles_vis_nuevos > 0:
+                    async_to_sync(channel_layer.group_send)(
+                        "live_odds",
+                        {
+                            "type": "odds_update",
+                            "data": {
+                                "tipo_evento": "CATALOGO_ACTUALIZADO",
+                                "motivo": "GOL_SIMULADOR",
+                                "evento_id": partido.id,
+                            },
+                        },
+                    )
+
                 async_to_sync(channel_layer.group_send)(
                     "live_odds",
                     {

@@ -7,4 +7,5 @@ urlpatterns = [
     path("crear-evento/", views.crear_evento_html, name="crear_evento_html"),
     path("cashout/", views.cashout_html, name="cashout_html"),
     path("historial/", views.historial_apuestas, name="historial_apuestas"),
+    path("api/catalogo/", views.catalogo_json, name="catalogo_json"),
 ]

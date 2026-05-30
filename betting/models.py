@@ -71,14 +71,13 @@ class Evento(models.Model):
             try:
                 original = Evento.objects.get(pk=self.pk)
                 
-                # Si pasa de PROGRAMADO a EN_VIVO (ej. desde el Django Admin)
+                # Reiniciar reloj al pasar a EN_VIVO
                 if original.estado == EstadoEvento.PROGRAMADO and self.estado == EstadoEvento.EN_VIVO:
                     self.minuto_actual = 0
                     self.periodo = "1T"
                 
 
-                import datetime
-                # Detectar cambios reales en fecha_inicio (ignorando microsegundos)
+                # Detectar cambios reales ignorando microsegundos
                 fecha_orig = original.fecha_inicio.replace(microsecond=0) if original.fecha_inicio else None
                 fecha_self = self.fecha_inicio.replace(microsecond=0) if self.fecha_inicio else None
                 if fecha_orig != fecha_self or original.estado != self.estado:
@@ -88,9 +87,7 @@ class Evento(models.Model):
                 goles_vis_diff = self.goles_visitante - original.goles_visitante
                 
                 if (goles_loc_diff > 0 or goles_vis_diff > 0) and self.estado == EstadoEvento.EN_VIVO:
-                    # Guardamos el marcador actualizado
                     super().save(*args, **kwargs)
-                    # Recalcular cuotas dinámicamente
                     from betting.services import recalcular_cuotas_por_goles
                     recalcular_cuotas_por_goles(self, goles_loc_diff, goles_vis_diff)
                     return
@@ -189,6 +186,7 @@ class Apuesta(models.Model):
     )
     creado = models.DateTimeField(auto_now_add=True)
     actualizado = models.DateTimeField(auto_now=True)
+    usar_bono = models.BooleanField(default=False, help_text="Indica si la apuesta fue realizada con saldo de bono")
 
     @property
     def payout(self):
@@ -203,12 +201,12 @@ class Apuesta(models.Model):
 
     def clean(self):
         super().clean()
-        # Solo validar estado del evento al crear nuevas apuestas (no al liquidar/actualizar estado)
-        if not self.pk and self.seleccion_id and self.seleccion.mercado.evento.estado not in [EstadoEvento.PROGRAMADO, EstadoEvento.EN_VIVO]:
+        # No validar estado del evento al liquidar o actualizar apuestas existentes
+        if not self.pk and self.estado == EstadoApuesta.ACCEPTED and self.seleccion_id and self.seleccion.mercado.evento.estado not in [EstadoEvento.PROGRAMADO, EstadoEvento.EN_VIVO]:
             raise ValidationError("Solo se permiten apuestas en eventos programados o en vivo.")
 
     def save(self, *args, **kwargs):
-        # Si es una actualización de estado (liquidación), saltar full_clean para evitar bloqueos
+        # Saltar full_clean al liquidar para evitar bloqueos
         if self.pk and self.estado in [EstadoApuesta.WON, EstadoApuesta.LOST, EstadoApuesta.CANCELLED, EstadoApuesta.CASHED_OUT]:
             super().save(*args, **kwargs)
         else:

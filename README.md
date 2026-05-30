@@ -4,6 +4,7 @@
 Plataforma educativa construida con Django 5.x + DRF, PostgreSQL, Redis, Celery y Django Channels.
 
 > ⚠️ *Plataforma educativa con moneda virtual. No constituye una casa de apuestas.*
+<img width="1365" height="688" alt="image" src="https://github.com/user-attachments/assets/c0c5080e-5b73-4786-aa12-31d104710b0e" />
 
 ---
 
@@ -97,6 +98,8 @@ Para regenerar el schema:
 ```bash
 docker compose exec web python manage.py spectacular --file schema.yml
 ```
+<img width="1365" height="691" alt="image" src="https://github.com/user-attachments/assets/ba7e69dd-afd0-4d72-b50b-946932c5e2e0" />
+
 
 ---
 

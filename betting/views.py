@@ -33,9 +33,12 @@ def catalogo_html(request):
         estado=EstadoApuesta.ACCEPTED
     ).select_related("seleccion__mercado__evento").prefetch_related("detalles__seleccion__mercado__evento").order_by("-creado")
 
+    from django.utils import timezone
+    hoy = timezone.localdate()
     apuestas_resueltas = Apuesta.objects.filter(
         usuario=request.user, 
-        estado__in=[EstadoApuesta.WON, EstadoApuesta.LOST, EstadoApuesta.CANCELLED, EstadoApuesta.CASHED_OUT]
+        estado__in=[EstadoApuesta.WON, EstadoApuesta.LOST, EstadoApuesta.CANCELLED, EstadoApuesta.CASHED_OUT],
+        actualizado__date=hoy
     ).select_related("seleccion__mercado__evento").prefetch_related("detalles__seleccion__mercado__evento").order_by('-creado')
 
     from betting.services import calcular_cashout
@@ -190,3 +193,81 @@ def crear_evento_html(request):
         "equipos": equipos,
     }
     return render(request, "betting/crear_evento.html", context)
+
+
+@login_required(login_url="login_html")
+def historial_apuestas(request):
+    from config.choices import EstadoApuesta, TipoCuenta, Direccion
+    from wallet.models import LedgerEntry
+    from betting.models import Apuesta
+    from collections import defaultdict
+
+    apuestas = Apuesta.objects.filter(
+        usuario=request.user
+    ).select_related("seleccion__mercado__evento").prefetch_related(
+        "detalles__seleccion__mercado__evento"
+    ).order_by("-creado")
+
+    entries = LedgerEntry.objects.filter(usuario=request.user)
+    tx_map = defaultdict(list)
+    for entry in entries:
+        tx_map[entry.id_transaccion].append(entry)
+
+    ganadas_count = 0
+    perdidas_count = 0
+    total_apostado = Decimal("0.0000")
+    total_retornado = Decimal("0.0000")
+
+    for ap in apuestas:
+        if ap.estado == EstadoApuesta.WON:
+            ap.retorno = ap.monto * ap.cuota_fijada
+            ganadas_count += 1
+            total_apostado += ap.monto
+            total_retornado += ap.retorno
+        elif ap.estado == EstadoApuesta.LOST:
+            ap.retorno = Decimal("0.0000")
+            perdidas_count += 1
+            total_apostado += ap.monto
+        elif ap.estado == EstadoApuesta.CANCELLED:
+            ap.retorno = ap.monto
+            total_apostado += ap.monto
+            total_retornado += ap.retorno
+        elif ap.estado == EstadoApuesta.CASHED_OUT:
+            retorno_val = Decimal("0.0000")
+            for tx_id, tx_entries in tx_map.items():
+                has_matching_debit = any(
+                    e.cuenta == TipoCuenta.APUESTAS_PENDIENTES and
+                    e.direccion == Direccion.DEBIT and
+                    abs(e.monto - ap.monto) < Decimal("0.0001") and
+                    abs((e.creado - ap.actualizado).total_seconds()) < 20
+                    for e in tx_entries
+                )
+                if has_matching_debit:
+                    credit_entry = next((
+                        e for e in tx_entries
+                        if e.cuenta == TipoCuenta.WALLET_USUARIO and e.direccion == Direccion.CREDIT
+                    ), None)
+                    if credit_entry:
+                        retorno_val = credit_entry.monto
+                        break
+            ap.retorno = retorno_val
+            total_apostado += ap.monto
+            total_retornado += ap.retorno
+        else: # ACCEPTED
+            ap.retorno = Decimal("0.0000")
+            total_apostado += ap.monto
+
+    net_balance = total_retornado - total_apostado
+    saldo = LedgerEntry.get_balance(request.user, TipoCuenta.WALLET_USUARIO)
+
+    context = {
+        "apuestas": apuestas,
+        "ganadas_count": ganadas_count,
+        "perdidas_count": perdidas_count,
+        "total_apostado": total_apostado,
+        "total_retornado": total_retornado,
+        "net_balance": net_balance,
+        "saldo": saldo,
+    }
+    return render(request, "betting/historial.html", context)
+

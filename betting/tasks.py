@@ -113,9 +113,14 @@ def simular_minuto_partidos_en_vivo():
                     )
                 continue
             
-            # random goals
-            gol_local = random.random() < 0.05
-            gol_visitante = random.random() < 0.05
+            # random goals (probabilidad del 2% y tope máximo de 5 goles por partido)
+            goles_totales = partido.goles_local + partido.goles_visitante
+            gol_local = False
+            gol_visitante = False
+            
+            if goles_totales < 5:
+                gol_local = random.random() < 0.02
+                gol_visitante = random.random() < 0.02
             
             goles_loc_nuevos = 0
             goles_vis_nuevos = 0

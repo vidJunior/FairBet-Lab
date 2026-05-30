@@ -18,7 +18,7 @@ def calculate_ggr(period_hours=24):
     """
     desde = timezone.now() - timedelta(hours=period_hours)
 
-    # Stakes: suma de montos de todas las apuestas resueltas en el período
+    # Calcular stakes
     apuestas_resueltas = Apuesta.objects.filter(
         estado__in=[EstadoApuesta.WON, EstadoApuesta.LOST, EstadoApuesta.CASHED_OUT],
         actualizado__gte=desde,
@@ -28,7 +28,7 @@ def calculate_ggr(period_hours=24):
         total=Sum("monto")
     )["total"] or Decimal("0.0000")
 
-    # Payouts: para apuestas ganadas = monto × cuota_fijada
+    # Calcular payouts (won)
     from django.db.models import F
     total_payouts_won = Apuesta.objects.filter(
         estado=EstadoApuesta.WON,
@@ -37,16 +37,14 @@ def calculate_ggr(period_hours=24):
         total=Sum(F("monto") * F("cuota_fijada"))
     )["total"] or Decimal("0.0000")
 
-    # Payouts: para apuestas con cash-out, el payout real se calcula
-    # desde los créditos en la billetera del usuario asociados a esas apuestas
+    # Calcular payouts (cashout)
     total_payouts_cashout = Decimal("0.0000")
     apuestas_cashout = Apuesta.objects.filter(
         estado=EstadoApuesta.CASHED_OUT,
         actualizado__gte=desde,
     )
     for apuesta_co in apuestas_cashout:
-        # El cashout se registró como crédito al usuario desde la casa
-        # Aproximamos con la fórmula estándar de cashout
+        # Cashout aprox
         sel = apuesta_co.seleccion
         if sel:
             cuota_actual = sel.cuota
@@ -74,12 +72,12 @@ def calculate_exposure_by_event():
     exposure_data = []
 
     for evento in eventos_activos:
-        # Todas las selecciones del evento, sin filtrar por mercado activo
+        # Selecciones (sin filtrar activas)
         selecciones = Seleccion.objects.filter(
             mercado__evento=evento,
         ).select_related("mercado")
 
-        # Total apostado en TODO el evento (todas las selecciones, apuestas accepted)
+        # Total apostado en evento
         total_apostado_evento = Decimal("0.0000")
         detalles_seleccion = []
 
@@ -112,15 +110,12 @@ def calculate_exposure_by_event():
                 )
 
         if detalles_seleccion:
-            # La exposure del evento es el peor escenario:
-            # max(payout_potencial de cada selección) - total apostado en el evento
-            # (si gana la selección con mayor payout, la casa pierde el payout pero
-            #  se queda con los stakes de todas las demás apuestas perdidas)
+            # Peor escenario: max(payout_potencial) - total_apostado
             max_payout = max(
                 Decimal(d["payout_potencial"]) for d in detalles_seleccion
             )
             exposure_neta = (max_payout - total_apostado_evento).quantize(Decimal("0.01"))
-            # Si la exposure es negativa, la casa gana en cualquier escenario
+            # Si es negativa, floor a 0
             exposure_neta = max(exposure_neta, Decimal("0.00"))
 
             exposure_data.append(
@@ -225,8 +220,7 @@ def crear_bono_bienvenida_automatico(user):
         rollover_multiplier=multiplicador,
     )
 
-    # Registrar los asientos contables en Billetera (Partida Doble)
-    # Débito a la Casa (pérdida promocional) y Crédito a la cuenta de Bonos del Usuario
+    # Registrar asientos contables
     tid = uuid.uuid4()
     registrar_movimiento(
         tid,
@@ -257,7 +251,7 @@ def crear_bono_recarga_masivo(monto, rollover_multiplier, expira):
     monto = Decimal(str(monto))
     rollover_multiplier = Decimal(str(rollover_multiplier))
 
-    # Filtramos usuarios que hayan recargado en los últimos 7 días
+    # Filtrar recargas (últimos 7 días)
     hace_una_semana = timezone.now() - timezone.timedelta(days=7)
     usuarios_recargaron = (
         LedgerEntry.objects.filter(
@@ -334,7 +328,7 @@ def reclamar_codigo_bono(user, codigo_texto):
     codigo_texto = codigo_texto.strip().upper()
 
     try:
-        # select_for_update para evitar condiciones de carrera en usos_actuales
+        # Usar select_for_update para evitar concurrencia
         codigo_bono = CodigoBono.objects.select_for_update().get(codigo=codigo_texto)
     except CodigoBono.DoesNotExist:
         raise ValidationError("El código ingresado no es válido.")
@@ -349,7 +343,7 @@ def reclamar_codigo_bono(user, codigo_texto):
             "Este código promocional ya ha alcanzado su límite de usos."
         )
 
-    # Validar que el usuario no lo haya canjeado previamente
+    # Validar duplicados
     if Bono.objects.filter(usuario=user, codigo_bono=codigo_bono).exists():
         raise ValidationError("Ya has canjeado este código promocional anteriormente.")
 
@@ -360,7 +354,7 @@ def reclamar_codigo_bono(user, codigo_texto):
     # Crear el Bono asociado
     bono = Bono.objects.create(
         usuario=user,
-        tipo=TipoBono.MANUAL,  # Usamos MANUAL como choice estándar para códigos canjeados por el usuario
+        tipo=TipoBono.MANUAL,  # Bono por código
         monto=codigo_bono.monto,
         rollover_multiplier=codigo_bono.rollover_multiplier,
         expira=codigo_bono.expira,

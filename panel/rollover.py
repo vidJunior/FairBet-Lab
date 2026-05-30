@@ -43,6 +43,20 @@ def actualizar_rollover_apuesta(apuesta):
 
         if bono.rollover_completado:
             bono.estado = EstadoBono.COMPLETADO
+            
+            # Transferir todo el saldo de bonos a la billetera principal
+            from wallet.models import LedgerEntry
+            from wallet.services import transferencia_interna
+            from config.choices import TipoCuenta
+            
+            saldo_bono = LedgerEntry.get_balance(apuesta.usuario, TipoCuenta.BONOS)
+            if saldo_bono > 0:
+                transferencia_interna(
+                    apuesta.usuario, 
+                    TipoCuenta.BONOS, 
+                    TipoCuenta.WALLET_USUARIO, 
+                    saldo_bono
+                )
 
         bono.save()
 

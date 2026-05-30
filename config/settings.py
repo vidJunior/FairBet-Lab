@@ -52,6 +52,7 @@ INSTALLED_APPS = [
     "api",
     "betting",
     "wallet",
+    "panel",
 ]
 
 MIDDLEWARE = [

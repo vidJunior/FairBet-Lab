@@ -16,6 +16,7 @@ from betting.api_views import (
     CatalogoEventosAPIView,
     CrearApuestaAPIView,
 )
+from panel.urls import api_urlpatterns as panel_api_urls
 
 urlpatterns = [
     # OpenAPI Schema
@@ -32,4 +33,5 @@ urlpatterns = [
     # Endpoints de Apuestas
     path("betting/catalogo/", CatalogoEventosAPIView.as_view(), name="api_betting_catalogo"),
     path("betting/apostar/", CrearApuestaAPIView.as_view(), name="api_betting_apostar"),
-]
+    # Endpoints del Operador
+] + panel_api_urls

@@ -33,18 +33,18 @@
         nav { background-color: #1e293b; padding: 16px; border-bottom: 1px solid #334155; }
         .max-w-7xl { max-width: 1280px; margin: 0 auto; padding: 24px; }
         .grid-cols-4 { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 20px; }
-        .bg-gray-800 { background-color: #1e293b; border-radius: 8px; border: 1px solid #334155; padding: 20px; }
+        .bg-slate-800 { background-color: #1e293b; border-radius: 8px; border: 1px solid #334155; padding: 20px; }
         .rounded-lg { border-radius: 8px; }
         .border { border: 1px solid #334155; }
         .p-6 { padding: 24px; }
-        .text-green-400 { color: #4ade80; }
+        .text-emerald-400 { color: #4ade80; }
         .text-blue-400 { color: #60a5fa; }
         .text-yellow-400 { color: #facc15; }
         .text-purple-400 { color: #c084fc; }
         .font-bold { font-weight: 700; }
         .text-3xl { font-size: 28px; }
         .text-sm { font-size: 14px; }
-        .text-gray-400 { color: #94a3b8; }
+        .text-slate-400 { color: #94a3b8; }
         .flex { display: flex; }
         .justify-between { justify-content: space-between; }
         .items-center { align-items: center; }
@@ -93,7 +93,7 @@
                 <div class="w-px h-6 bg-slate-200 mx-1"></div>
                 <!-- Botón Cerrar Sesión -->
                 <a href="{% url 'logout_html' %}"
-                   class="px-4 py-2 rounded-xl bg-red-50 hover:bg-red-600 text-red-600 hover:text-white font-semibold text-sm transition-all border border-red-200 hover:border-red-600 flex items-center gap-1.5 group"
+                   class="px-4 py-2 rounded-xl bg-rose-50 hover:bg-rose-600 text-rose-600 hover:text-white font-semibold text-sm transition-all border border-rose-200 hover:border-rose-600 flex items-center gap-1.5 group"
                    title="Cerrar sesión del panel">
                     <i data-lucide="log-out" class="w-4 h-4 transition-transform group-hover:-translate-x-0.5"></i>
                     Cerrar Sesión
@@ -120,7 +120,7 @@
         <div id="tab-metrics-content" class="space-y-6">
             <div class="flex items-center justify-between mb-6">
                 <h2 class="text-xl font-semibold">Métricas en Vivo</h2>
-                <span class="text-sm text-gray-400" id="last-update">Actualizado: --</span>
+                <span class="text-sm text-slate-400" id="last-update">Actualizado: --</span>
             </div>
 
             <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
@@ -185,18 +185,18 @@
                                     {% endif %}
                                 </td>
                                 <td class="py-3 px-4 text-right font-mono font-bold text-rose-600">f. {{ evento.total_exposure }}</td>
-                                <td class="py-3 px-3 text-xs text-gray-400">
+                                <td class="py-3 px-3 text-xs text-slate-400">
                                     {% for sel in evento.selecciones|slice:":3" %}
                                         <span class="inline-block mr-2">{{ sel.seleccion_nombre }}: f. {{ sel.exposure }}</span>
                                     {% endfor %}
                                     {% if evento.selecciones|length > 3 %}
-                                        <span class="text-gray-500">+{{ evento.selecciones|length|add:"-3" }} más</span>
+                                        <span class="text-slate-500">+{{ evento.selecciones|length|add:"-3" }} más</span>
                                     {% endif %}
                                 </td>
                             </tr>
                             {% empty %}
                             <tr>
-                                <td colspan="4" class="py-4 text-center text-gray-500">No hay eventos con exposure activo</td>
+                                <td colspan="4" class="py-4 text-center text-slate-500">No hay eventos con exposure activo</td>
                             </tr>
                             {% endfor %}
                         </tbody>
@@ -257,7 +257,7 @@
                                         <span class="px-2.5 py-1 rounded-lg bg-rose-50 text-rose-700 border border-rose-100 font-bold uppercase text-[10px]">Revocado</span>
                                     {% endif %}
                                 </td>
-                                <td class="py-3 px-3 text-xs text-gray-400">
+                                <td class="py-3 px-3 text-xs text-slate-400">
                                     {% if b.expira %}
                                         {{ b.expira|date:"d/m/Y H:i" }}
                                     {% else %}
@@ -267,7 +267,7 @@
                             </tr>
                             {% empty %}
                             <tr>
-                                <td colspan="6" class="py-4 text-center text-gray-500">No se han emitido bonos promocionales en el sistema</td>
+                                <td colspan="6" class="py-4 text-center text-slate-500">No se han emitido bonos promocionales en el sistema</td>
                             </tr>
                             {% endfor %}
                         </tbody>
@@ -375,11 +375,29 @@
             
             <form id="bonoForm" onsubmit="submitBonoForm(event)" class="space-y-4">
                 {% csrf_token %}
-                <input type="hidden" id="bono_tipo" name="tipo" value="codigo">
-
+                
                 <div>
+                    <label class="block text-xs font-bold text-slate-500 mb-1 uppercase tracking-wider">Tipo de Bono</label>
+                    <select id="bono_tipo" name="tipo" onchange="onBonoTipoChange()" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-slate-800 focus:outline-none focus:border-indigo-600 text-sm font-semibold">
+                        <option value="codigo">Código Promocional (canje masivo)</option>
+                        <option value="recarga">Recarga Masiva (usuarios activos)</option>
+                        <option value="manual">Individual (asignar a un usuario)</option>
+                    </select>
+                </div>
+
+                <div id="bono_usuario_group" class="hidden">
+                    <label class="block text-xs font-bold text-slate-500 mb-1 uppercase tracking-wider">Usuario</label>
+                    <select id="bono_usuario_id" name="usuario_id" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-slate-800 focus:outline-none focus:border-indigo-600 text-sm font-semibold">
+                        <option value="">Seleccionar usuario...</option>
+                        {% for u in users %}
+                        <option value="{{ u.id }}">{{ u.username }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div id="bono_codigo_group">
                     <label class="block text-xs font-bold text-slate-500 mb-1 uppercase tracking-wider">Código de Bono</label>
-                    <input type="text" id="bono_codigo" name="codigo" required placeholder="Ej. GANADOR2026" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-slate-800 placeholder-slate-400 focus:outline-none focus:border-indigo-600 uppercase font-black tracking-widest text-sm">
+                    <input type="text" id="bono_codigo" name="codigo" placeholder="Ej. GANADOR2026" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-slate-800 placeholder-slate-400 focus:outline-none focus:border-indigo-600 uppercase font-black tracking-wider text-sm">
                 </div>
 
                 <div>
@@ -389,12 +407,12 @@
 
                 <div>
                     <label class="block text-xs font-bold text-slate-500 mb-1 uppercase tracking-wider">Multiplicador de Rollover (x)</label>
-                    <input type="number" step="1" min="1" id="bono_rollover" name="rollover_multiplier" value="5" required class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-slate-800 focus:outline-none focus:border-indigo-600 text-sm font-semibold">
+                    <input type="number" step="0.01" min="0.01" id="bono_rollover" name="rollover_multiplier" value="5" required class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-slate-800 focus:outline-none focus:border-indigo-600 text-sm font-semibold">
                 </div>
 
-                <div>
+                <div id="bono_usos_group" class="hidden">
                     <label class="block text-xs font-bold text-slate-500 mb-1 uppercase tracking-wider">Máximo de Personas (Límite de Usos)</label>
-                    <input type="number" step="1" min="1" id="bono_usos_maximos" name="usos_maximos" required placeholder="Ej. 50" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-slate-800 placeholder-slate-400 focus:outline-none focus:border-indigo-600 text-sm font-semibold">
+                    <input type="number" step="1" min="1" id="bono_usos_maximos" name="usos_maximos" placeholder="Ej. 50" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-slate-800 placeholder-slate-400 focus:outline-none focus:border-indigo-600 text-sm font-semibold">
                 </div>
 
                 <div class="grid grid-cols-2 gap-3">
@@ -411,10 +429,10 @@
                 <div id="bonoMsg" class="hidden text-sm p-3 rounded-xl"></div>
 
                 <div class="flex gap-3 justify-end pt-2">
-                    <button type="button" onclick="closeBonoModal()" class="px-4 py-2 rounded-lg bg-gray-700 hover:bg-gray-600 text-white font-medium transition-colors">
+                    <button type="button" onclick="closeBonoModal()" class="px-4 py-2 rounded-lg bg-slate-700 hover:bg-slate-600 text-white font-medium transition-colors">
                         Cancelar
                     </button>
-                    <button type="submit" class="px-4 py-2 rounded-lg bg-green-600 hover:bg-green-700 text-white font-medium transition-colors">
+                    <button type="submit" class="px-4 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white font-medium transition-colors">
                         Crear Bono
                     </button>
                 </div>
@@ -492,18 +510,18 @@
                             <span id="ctrl_local_label" class="block font-black text-xs text-slate-500 uppercase tracking-wider truncate max-w-[120px] mx-auto">Local</span>
                             <div class="flex items-center justify-center gap-2 mt-2">
                                 <button type="button" onclick="modifyGol('local', -1)" class="w-8 h-8 rounded-lg bg-slate-200 hover:bg-slate-300 text-slate-700 font-bold flex items-center justify-center border border-slate-300 transition-colors shadow-sm">-</button>
-                                <span id="ctrl_goles_local" class="text-3xl font-black text-slate-850 px-2 font-mono">0</span>
+                                <span id="ctrl_goles_local" class="text-3xl font-black text-slate-900 px-2 font-mono">0</span>
                                 <button type="button" onclick="modifyGol('local', 1)" class="w-8 h-8 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-bold flex items-center justify-center shadow transition-colors">+</button>
                             </div>
                         </div>
 
-                        <div class="text-center font-black text-slate-400 text-sm tracking-widest">VS</div>
+                        <div class="text-center font-black text-slate-400 text-sm tracking-wider">VS</div>
 
                         <div class="text-center flex-1">
                             <span id="ctrl_visitante_label" class="block font-black text-xs text-slate-500 uppercase tracking-wider truncate max-w-[120px] mx-auto">Visitante</span>
                             <div class="flex items-center justify-center gap-2 mt-2">
                                 <button type="button" onclick="modifyGol('visitante', -1)" class="w-8 h-8 rounded-lg bg-slate-200 hover:bg-slate-300 text-slate-700 font-bold flex items-center justify-center border border-slate-300 transition-colors shadow-sm">-</button>
-                                <span id="ctrl_goles_visitante" class="text-3xl font-black text-slate-850 px-2 font-mono">0</span>
+                                <span id="ctrl_goles_visitante" class="text-3xl font-black text-slate-900 px-2 font-mono">0</span>
                                 <button type="button" onclick="modifyGol('visitante', 1)" class="w-8 h-8 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-bold flex items-center justify-center shadow transition-colors">+</button>
                             </div>
                         </div>
@@ -550,7 +568,7 @@
 
                 <!-- Mercados Activos -->
                 <div class="border-t border-slate-200 pt-4 space-y-2">
-                    <h4 class="text-xs font-black uppercase tracking-widest text-slate-400 flex items-center gap-1.5">
+                    <h4 class="text-xs font-black uppercase tracking-wider text-slate-400 flex items-center gap-1.5">
                         <i data-lucide="layout-grid" class="w-4 h-4 text-emerald-600"></i>
                         Mercados Activos en este Partido
                     </h4>
@@ -561,7 +579,7 @@
 
                 <!-- Añadir Nuevos Mercados -->
                 <div class="border-t border-slate-200 pt-4 space-y-3">
-                    <h4 class="text-xs font-black uppercase tracking-widest text-slate-400 flex items-center gap-1.5">
+                    <h4 class="text-xs font-black uppercase tracking-wider text-slate-400 flex items-center gap-1.5">
                         <i data-lucide="plus-circle" class="w-4 h-4 text-indigo-600"></i>
                         Añadir Nuevo Mercado
                     </h4>
@@ -580,7 +598,7 @@
                             <div>
                                 <label class="block text-[10px] font-bold text-slate-500 mb-1 uppercase tracking-wider">Cálculo de Cuotas</label>
                                 <div class="flex bg-slate-200/60 p-1 rounded-xl border border-slate-200/40">
-                                    <button type="button" id="btn-odds-manual" onclick="setOddsMode('manual')" class="flex-1 py-1 text-[10px] font-black uppercase tracking-wider rounded-lg transition-all text-center bg-white text-indigo-750 shadow-2xs border border-slate-200/50">
+                                    <button type="button" id="btn-odds-manual" onclick="setOddsMode('manual')" class="flex-1 py-1 text-[10px] font-black uppercase tracking-wider rounded-lg transition-all text-center bg-white text-indigo-700 shadow-sm border border-slate-200/50">
                                         Manual
                                     </button>
                                     <button type="button" id="btn-odds-auto" onclick="setOddsMode('auto')" class="flex-1 py-1 text-[10px] font-bold uppercase tracking-wider rounded-lg transition-all text-center text-slate-500 hover:text-slate-700">
@@ -761,7 +779,7 @@
                     });
                 })
                 .catch(err => {
-                    tbody.innerHTML = `<tr><td colspan="7" class="py-4 text-center text-red-400">Error al cargar partidos: ${err}</td></tr>`;
+                    tbody.innerHTML = `<tr><td colspan="7" class="py-4 text-center text-rose-400">Error al cargar partidos: ${err}</td></tr>`;
                 });
         }
 
@@ -789,7 +807,7 @@
             const horaVal = document.getElementById('evt_hora').value;
 
             if (!local || !visitante || !fechaVal || !horaVal) {
-                msgDiv.className = 'text-sm p-3 rounded-lg bg-red-600/20 text-red-400 border border-red-700/50';
+                msgDiv.className = 'text-sm p-3 rounded-lg bg-rose-600/20 text-rose-400 border border-rose-700/50';
                 msgDiv.textContent = 'Por favor, rellena todos los campos.';
                 return;
             }
@@ -811,19 +829,19 @@
             .then(async r => {
                 const data = await r.json();
                 if (r.ok) {
-                    msgDiv.className = 'text-sm p-3 rounded-lg bg-green-600/20 text-green-400 border border-green-700/50';
+                    msgDiv.className = 'text-sm p-3 rounded-lg bg-emerald-600/20 text-emerald-400 border border-emerald-700/50';
                     msgDiv.textContent = '¡Partido creado con éxito con mercado 1X2 por defecto!';
                     setTimeout(() => {
                         closeCreateEventoModal();
                         loadLiveEventos();
                     }, 1500);
                 } else {
-                    msgDiv.className = 'text-sm p-3 rounded-lg bg-red-600/20 text-red-400 border border-red-700/50';
+                    msgDiv.className = 'text-sm p-3 rounded-lg bg-rose-600/20 text-rose-400 border border-rose-700/50';
                     msgDiv.textContent = 'Error: ' + (data.error || JSON.stringify(data));
                 }
             })
             .catch(err => {
-                msgDiv.className = 'text-sm p-3 rounded-lg bg-red-600/20 text-red-400 border border-red-700/50';
+                msgDiv.className = 'text-sm p-3 rounded-lg bg-rose-600/20 text-rose-400 border border-rose-700/50';
                 msgDiv.textContent = 'Error de red: ' + err;
             });
         }
@@ -994,7 +1012,7 @@
             .then(async r => {
                 const data = await r.json();
                 if (r.ok) {
-                    msgDiv.className = 'text-sm p-3 rounded-lg bg-green-600/20 text-green-400 border border-green-700/50';
+                    msgDiv.className = 'text-sm p-3 rounded-lg bg-emerald-600/20 text-emerald-400 border border-emerald-700/50';
                     msgDiv.textContent = '¡Marcador y estado actualizados! Notificación en vivo transmitida.';
                     setTimeout(() => {
                         msgDiv.className = 'hidden';
@@ -1002,12 +1020,12 @@
                         loadLiveEventos();
                     }, 1200);
                 } else {
-                    msgDiv.className = 'text-sm p-3 rounded-lg bg-red-600/20 text-red-400 border border-red-700/50';
+                    msgDiv.className = 'text-sm p-3 rounded-lg bg-rose-600/20 text-rose-400 border border-rose-700/50';
                     msgDiv.textContent = 'Error: ' + (data.error || JSON.stringify(data));
                 }
             })
             .catch(err => {
-                msgDiv.className = 'text-sm p-3 rounded-lg bg-red-600/20 text-red-400 border border-red-700/50';
+                msgDiv.className = 'text-sm p-3 rounded-lg bg-rose-600/20 text-rose-400 border border-rose-700/50';
                 msgDiv.textContent = 'Error de red: ' + err;
             });
         }
@@ -1022,38 +1040,38 @@
             if (mkt === 'Doble Oportunidad') {
                 inputsHTML = `
                     <div>
-                        <label class="block text-[9px] font-bold text-gray-500 mb-1">1X (Local o Empate)</label>
-                        <input type="number" step="0.01" min="1.01" required id="cuota_1x" placeholder="Ej. 1.35" class="w-full bg-gray-900 border border-gray-700 rounded-lg px-2 py-1 text-xs text-white focus:outline-none focus:border-violet-500 font-mono">
+                        <label class="block text-[9px] font-bold text-slate-500 mb-1">1X (Local o Empate)</label>
+                        <input type="number" step="0.01" min="1.01" required id="cuota_1x" placeholder="Ej. 1.35" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-2 py-1 text-xs text-white focus:outline-none focus:border-violet-500 font-mono">
                     </div>
                     <div>
-                        <label class="block text-[9px] font-bold text-gray-500 mb-1">X2 (Empate o Visita)</label>
-                        <input type="number" step="0.01" min="1.01" required id="cuota_x2" placeholder="Ej. 1.45" class="w-full bg-gray-900 border border-gray-700 rounded-lg px-2 py-1 text-xs text-white focus:outline-none focus:border-violet-500 font-mono">
+                        <label class="block text-[9px] font-bold text-slate-500 mb-1">X2 (Empate o Visita)</label>
+                        <input type="number" step="0.01" min="1.01" required id="cuota_x2" placeholder="Ej. 1.45" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-2 py-1 text-xs text-white focus:outline-none focus:border-violet-500 font-mono">
                     </div>
                     <div>
-                        <label class="block text-[9px] font-bold text-gray-500 mb-1">12 (Local o Visita)</label>
-                        <input type="number" step="0.01" min="1.01" required id="cuota_12" placeholder="Ej. 1.25" class="w-full bg-gray-900 border border-gray-700 rounded-lg px-2 py-1 text-xs text-white focus:outline-none focus:border-violet-500 font-mono">
+                        <label class="block text-[9px] font-bold text-slate-500 mb-1">12 (Local o Visita)</label>
+                        <input type="number" step="0.01" min="1.01" required id="cuota_12" placeholder="Ej. 1.25" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-2 py-1 text-xs text-white focus:outline-none focus:border-violet-500 font-mono">
                     </div>
                 `;
             } else if (mkt === 'Ambos Equipos Anotan') {
                 inputsHTML = `
                     <div>
-                        <label class="block text-[9px] font-bold text-gray-500 mb-1">Sí (Anotan ambos)</label>
-                        <input type="number" step="0.01" min="1.01" required id="cuota_si" placeholder="Ej. 1.95" class="w-full bg-gray-900 border border-gray-700 rounded-lg px-2 py-1 text-xs text-white focus:outline-none focus:border-violet-500 font-mono">
+                        <label class="block text-[9px] font-bold text-slate-500 mb-1">Sí (Anotan ambos)</label>
+                        <input type="number" step="0.01" min="1.01" required id="cuota_si" placeholder="Ej. 1.95" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-2 py-1 text-xs text-white focus:outline-none focus:border-violet-500 font-mono">
                     </div>
                     <div>
-                        <label class="block text-[9px] font-bold text-gray-500 mb-1">No (No anotan ambos)</label>
-                        <input type="number" step="0.01" min="1.01" required id="cuota_no" placeholder="Ej. 1.85" class="w-full bg-gray-900 border border-gray-700 rounded-lg px-2 py-1 text-xs text-white focus:outline-none focus:border-violet-500 font-mono font-semibold text-slate-700 placeholder-slate-400">
+                        <label class="block text-[9px] font-bold text-slate-500 mb-1">No (No anotan ambos)</label>
+                        <input type="number" step="0.01" min="1.01" required id="cuota_no" placeholder="Ej. 1.85" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-2 py-1 text-xs text-white focus:outline-none focus:border-violet-500 font-mono font-semibold text-slate-700 placeholder-slate-400">
                     </div>
                 `;
             } else { // Más/Menos 2.5
                 inputsHTML = `
                     <div>
-                        <label class="block text-[9px] font-bold text-gray-500 mb-1">Más de 2.5 Goles</label>
-                        <input type="number" step="0.01" min="1.01" required id="cuota_mas" placeholder="Ej. 1.80" class="w-full bg-gray-900 border border-gray-700 rounded-lg px-2 py-1 text-xs text-white focus:outline-none focus:border-violet-500 font-mono">
+                        <label class="block text-[9px] font-bold text-slate-500 mb-1">Más de 2.5 Goles</label>
+                        <input type="number" step="0.01" min="1.01" required id="cuota_mas" placeholder="Ej. 1.80" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-2 py-1 text-xs text-white focus:outline-none focus:border-violet-500 font-mono">
                     </div>
                     <div>
-                        <label class="block text-[9px] font-bold text-gray-500 mb-1">Menos de 2.5 Goles</label>
-                        <input type="number" step="0.01" min="1.01" required id="cuota_menos" placeholder="Ej. 1.90" class="w-full bg-gray-900 border border-gray-700 rounded-lg px-2 py-1 text-xs text-white focus:outline-none focus:border-violet-500 font-mono">
+                        <label class="block text-[9px] font-bold text-slate-500 mb-1">Menos de 2.5 Goles</label>
+                        <input type="number" step="0.01" min="1.01" required id="cuota_menos" placeholder="Ej. 1.90" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-2 py-1 text-xs text-white focus:outline-none focus:border-violet-500 font-mono">
                     </div>
                 `;
             }
@@ -1072,7 +1090,7 @@
             const btnAuto = document.getElementById('btn-odds-auto');
             const container = document.getElementById('mkt_selecciones_container');
 
-            const activeClass = "flex-1 py-1 text-[10px] font-black uppercase tracking-wider rounded-lg transition-all text-center bg-white text-indigo-750 shadow-2xs border border-slate-200/50";
+            const activeClass = "flex-1 py-1 text-[10px] font-black uppercase tracking-wider rounded-lg transition-all text-center bg-white text-indigo-700 shadow-sm border border-slate-200/50";
             const inactiveClass = "flex-1 py-1 text-[10px] font-bold uppercase tracking-wider rounded-lg transition-all text-center text-slate-500 hover:text-slate-700";
 
             if (mode === 'manual') {
@@ -1141,19 +1159,19 @@
             .then(async r => {
                 const data = await r.json();
                 if (r.ok) {
-                    msgDiv.className = 'text-sm p-3 rounded-lg bg-green-600/20 text-green-400 border border-green-700/50';
+                    msgDiv.className = 'text-sm p-3 rounded-lg bg-emerald-600/20 text-emerald-400 border border-emerald-700/50';
                     msgDiv.textContent = '¡Nuevo mercado añadido con éxito con cuotas fijadas!';
                     document.getElementById('addMercadoForm').reset();
                     toggleMercadoOptions();
                     loadLiveEventos(id); // Recarga y actualiza los mercados en el modal de forma reactiva
                     setTimeout(() => { msgDiv.className = 'hidden'; }, 2000);
                 } else {
-                    msgDiv.className = 'text-sm p-3 rounded-lg bg-red-600/20 text-red-400 border border-red-700/50';
+                    msgDiv.className = 'text-sm p-3 rounded-lg bg-rose-600/20 text-rose-400 border border-rose-700/50';
                     msgDiv.textContent = 'Error: ' + (data.error || JSON.stringify(data));
                 }
             })
             .catch(err => {
-                msgDiv.className = 'text-sm p-3 rounded-lg bg-red-600/20 text-red-400 border border-red-700/50';
+                msgDiv.className = 'text-sm p-3 rounded-lg bg-rose-600/20 text-rose-400 border border-rose-700/50';
                 msgDiv.textContent = 'Error de red: ' + err;
             });
         }
@@ -1186,7 +1204,7 @@
                 .then(data => {
                     tbody.innerHTML = '';
                     if (data.length === 0) {
-                        tbody.innerHTML = '<tr><td colspan="6" class="py-4 text-center text-gray-500">No se han emitido bonos promocionales en el sistema</td></tr>';
+                        tbody.innerHTML = '<tr><td colspan="6" class="py-4 text-center text-slate-500">No se han emitido bonos promocionales en el sistema</td></tr>';
                         return;
                     }
 
@@ -1236,7 +1254,7 @@
                             <td class="py-3 px-4 text-xs">
                                 ${estadoBadge}
                             </td>
-                            <td class="py-3 px-3 text-xs text-gray-400">
+                            <td class="py-3 px-3 text-xs text-slate-400">
                                 ${expDate}
                             </td>
                         `;
@@ -1321,12 +1339,42 @@
             const modal = document.getElementById('bonoModal');
             modal.classList.remove('hidden');
             document.getElementById('bonoForm').reset();
+            document.getElementById('bono_tipo').value = 'codigo';
             document.getElementById('bonoMsg').className = 'hidden text-sm p-3 rounded-lg';
+            onBonoTipoChange();
             lucide.createIcons();
         }
 
         function closeBonoModal() {
             document.getElementById('bonoModal').classList.add('hidden');
+        }
+
+        function onBonoTipoChange() {
+            const tipo = document.getElementById('bono_tipo').value;
+            const codigoGroup = document.getElementById('bono_codigo_group');
+            const usosGroup = document.getElementById('bono_usos_group');
+            const usuarioGroup = document.getElementById('bono_usuario_group');
+            const codigoInput = document.getElementById('bono_codigo');
+            const usosInput = document.getElementById('bono_usos_maximos');
+            const usuarioInput = document.getElementById('bono_usuario_id');
+
+            codigoGroup.classList.add('hidden');
+            usosGroup.classList.add('hidden');
+            usuarioGroup.classList.add('hidden');
+
+            codigoInput.removeAttribute('required');
+            usosInput.removeAttribute('required');
+            usuarioInput.removeAttribute('required');
+
+            if (tipo === 'codigo') {
+                codigoGroup.classList.remove('hidden');
+                usosGroup.classList.remove('hidden');
+                codigoInput.setAttribute('required', '');
+                usosInput.setAttribute('required', '');
+            } else if (tipo === 'manual') {
+                usuarioGroup.classList.remove('hidden');
+                usuarioInput.setAttribute('required', '');
+            }
         }
 
         function submitBonoForm(e) {
@@ -1335,21 +1383,47 @@
             msgDiv.className = 'hidden';
 
             const tipo = document.getElementById('bono_tipo').value;
+            const monto = parseFloat(document.getElementById('bono_monto').value);
+            const rollover = parseFloat(document.getElementById('bono_rollover').value);
+
+            if (isNaN(monto) || monto <= 0) {
+                msgDiv.className = 'text-sm p-3 rounded-lg bg-rose-600/20 text-rose-400 border border-rose-700/50';
+                msgDiv.textContent = 'El monto debe ser mayor a 0.';
+                return;
+            }
+
             const payload = {
                 tipo: tipo,
-                monto: parseFloat(document.getElementById('bono_monto').value),
-                rollover_multiplier: parseFloat(document.getElementById('bono_rollover').value),
+                monto: monto,
+                rollover_multiplier: rollover,
             };
 
             const fechaVal = document.getElementById('bono_fecha').value;
             const horaVal = document.getElementById('bono_hora').value;
             if (fechaVal && horaVal) {
                 payload.expira = new Date(`${fechaVal}T${horaVal}`).toISOString();
+            } else {
+                msgDiv.className = 'text-sm p-3 rounded-lg bg-rose-600/20 text-rose-400 border border-rose-700/50';
+                msgDiv.textContent = 'La fecha y hora de expiración son obligatorias.';
+                return;
             }
 
             if (tipo === 'codigo') {
                 payload.codigo = document.getElementById('bono_codigo').value.trim().toUpperCase();
                 payload.usos_maximos = parseInt(document.getElementById('bono_usos_maximos').value);
+                if (!payload.codigo || !payload.usos_maximos) {
+                    msgDiv.className = 'text-sm p-3 rounded-lg bg-rose-600/20 text-rose-400 border border-rose-700/50';
+                    msgDiv.textContent = 'El código y el límite de usos son obligatorios.';
+                    return;
+                }
+            } else if (tipo === 'manual') {
+                const uid = document.getElementById('bono_usuario_id').value;
+                if (!uid) {
+                    msgDiv.className = 'text-sm p-3 rounded-lg bg-rose-600/20 text-rose-400 border border-rose-700/50';
+                    msgDiv.textContent = 'Debe seleccionar un usuario.';
+                    return;
+                }
+                payload.usuario_id = parseInt(uid);
             }
 
             fetch('/api/operator/bonos/', {
@@ -1363,19 +1437,19 @@
             .then(async r => {
                 const data = await r.json();
                 if (r.ok) {
-                    msgDiv.className = 'text-sm p-3 rounded-lg bg-green-600/20 text-green-400 border border-green-700/50';
+                    msgDiv.className = 'text-sm p-3 rounded-lg bg-emerald-600/20 text-emerald-400 border border-emerald-700/50';
                     msgDiv.textContent = data.message || '¡Bono creado con éxito!';
                     setTimeout(() => {
                         closeBonoModal();
                         loadBonos(); 
                     }, 1500);
                 } else {
-                    msgDiv.className = 'text-sm p-3 rounded-lg bg-red-600/20 text-red-400 border border-red-700/50';
+                    msgDiv.className = 'text-sm p-3 rounded-lg bg-rose-600/20 text-rose-400 border border-rose-700/50';
                     msgDiv.textContent = 'Error: ' + (data.error || JSON.stringify(data));
                 }
             })
             .catch(err => {
-                msgDiv.className = 'text-sm p-3 rounded-lg bg-red-600/20 text-red-400 border border-red-700/50';
+                msgDiv.className = 'text-sm p-3 rounded-lg bg-rose-600/20 text-rose-400 border border-rose-700/50';
                 msgDiv.textContent = 'Error al conectar con la API: ' + err;
             });
         }
@@ -1397,7 +1471,7 @@
             const tableContainer = document.getElementById('alertas-table-container');
             const emptyState = document.getElementById('alertas-empty-state');
             
-            tbody.innerHTML = '<tr><td colspan="6" class="py-4 text-center text-gray-500 font-medium">Cargando alertas...</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="6" class="py-4 text-center text-slate-500 font-medium">Cargando alertas...</td></tr>';
             tableContainer.classList.remove('hidden');
             emptyState.classList.add('hidden');
 
@@ -1417,25 +1491,25 @@
 
                     data.forEach(al => {
                         const tr = document.createElement('tr');
-                        tr.className = 'border-b border-gray-700/50 hover:bg-gray-700/30 transition-colors';
+                        tr.className = 'border-b border-slate-700/50 hover:bg-slate-700/30 transition-colors';
 
                         const f = new Date(al.creado).toLocaleString();
                         const detString = JSON.stringify(al.detalle);
 
                         tr.innerHTML = `
-                            <td class="py-3 px-3 font-semibold text-gray-300">${al.usuario_username}</td>
-                            <td class="py-3 px-3 text-xs text-gray-400">${al.bono_tipo.toUpperCase()} (f. ${parseFloat(al.bono_monto).toFixed(2)})</td>
+                            <td class="py-3 px-3 font-semibold text-slate-300">${al.usuario_username}</td>
+                            <td class="py-3 px-3 text-xs text-slate-400">${al.bono_tipo.toUpperCase()} (f. ${parseFloat(al.bono_monto).toFixed(2)})</td>
                             <td class="py-3 px-3">
-                                <span class="px-2 py-1 rounded text-xs bg-red-600/20 text-red-400 font-bold">
+                                <span class="px-2 py-1 rounded text-xs bg-rose-600/20 text-rose-400 font-bold">
                                     ${al.tipo === 'risk_free' ? 'Apuesta Sin Riesgo' : al.tipo === 'matched_betting' ? 'Matched Betting' : 'Arbitraje'}
                                 </span>
                             </td>
-                            <td class="py-3 px-3 text-xs text-gray-500 max-w-xs truncate" title='${detString}'>
-                                ${al.tipo === 'risk_free' ? `Total Apostado: f. ${parseFloat(al.detalle.total_apostado).toFixed(2)}, Ganancia Garantizada: f. ${parseFloat(al.detalle.ganancia_minima).toFixed(2)}` : `Staked: f. ${parseFloat(al.detalle.total_apostado).toFixed(2)}, Garantizada: f. ${parseFloat(al.detalle.ganancia_garantizada).toFixed(2)}`}
+                            <td class="py-3 px-3 text-xs text-slate-500 max-w-xs truncate" title='${detString}'>
+                                ${al.tipo === 'risk_free' ? `Total Apostado: f. ${parseFloat(al.detalle.total_apostado).toFixed(2)}, Ganancia Mín: f. ${parseFloat(al.detalle.ganancia_minima).toFixed(2)}` : al.tipo === 'matched_betting' ? `Bono: f. ${parseFloat(al.detalle.total_apostado_bono).toFixed(2)} / Real: f. ${parseFloat(al.detalle.total_apostado_sin_bono).toFixed(2)}, Garantía: f. ${parseFloat(al.detalle.ganancia_garantizada).toFixed(2)}` : `Staked: f. ${parseFloat(al.detalle.total_apostado).toFixed(2)}, Garantizada: f. ${parseFloat(al.detalle.ganancia_garantizada).toFixed(2)}`}
                             </td>
-                            <td class="py-3 px-3 text-xs text-gray-400">${f}</td>
+                            <td class="py-3 px-3 text-xs text-slate-400">${f}</td>
                             <td class="py-3 px-3 text-right">
-                                <button onclick="revisarAlerta('${al.id}')" class="px-2.5 py-1 rounded bg-green-600 hover:bg-green-700 text-white text-xs font-semibold transition-colors">
+                                <button onclick="revisarAlerta('${al.id}')" class="px-2.5 py-1 rounded bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold transition-colors">
                                     Marcar Revisada
                                 </button>
                             </td>
@@ -1445,7 +1519,7 @@
                     lucide.createIcons();
                 })
                 .catch(err => {
-                    tbody.innerHTML = `<tr><td colspan="6" class="py-4 text-center text-red-400">Error al cargar alertas: ${err}</td></tr>`;
+                    tbody.innerHTML = `<tr><td colspan="6" class="py-4 text-center text-rose-400">Error al cargar alertas: ${err}</td></tr>`;
                 });
         }
 
@@ -1478,16 +1552,16 @@
             })
             .then(r => {
                 if (r.ok) {
-                    msgDiv.className = 'text-sm p-3 rounded-lg bg-green-600/20 text-green-400 border border-green-700/50';
+                    msgDiv.className = 'text-sm p-3 rounded-lg bg-emerald-600/20 text-emerald-400 border border-emerald-700/50';
                     msgDiv.textContent = '¡Análisis de abuso ejecutado correctamente!';
                     loadAlertas();
                 } else {
-                    msgDiv.className = 'text-sm p-3 rounded-lg bg-red-600/20 text-red-400 border border-red-700/50';
+                    msgDiv.className = 'text-sm p-3 rounded-lg bg-rose-600/20 text-rose-400 border border-rose-700/50';
                     msgDiv.textContent = 'Error al ejecutar el escaneo de abuso.';
                 }
             })
             .catch(err => {
-                msgDiv.className = 'text-sm p-3 rounded-lg bg-red-600/20 text-red-400 border border-red-700/50';
+                msgDiv.className = 'text-sm p-3 rounded-lg bg-rose-600/20 text-rose-400 border border-rose-700/50';
                 msgDiv.textContent = 'Error de red al ejecutar escaneo.';
             });
         }

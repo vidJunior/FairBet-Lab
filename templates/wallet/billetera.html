@@ -9,7 +9,7 @@
   <div class="space-y-2">
     {% for message in messages %}
     <div class="p-3.5 rounded-lg text-sm flex items-start gap-3
-      {% if message.tags == 'error' %}bg-red-50 border border-red-200 text-red-800
+      {% if message.tags == 'error' %}bg-rose-50 border border-rose-200 text-rose-800
       {% else %}bg-emerald-50 border border-emerald-200 text-emerald-800{% endif %}">
       <i data-lucide="{% if message.tags == 'error' %}alert-circle{% else %}check-circle{% endif %}"
          class="w-4 h-4 shrink-0 mt-0.5"></i>
@@ -121,7 +121,7 @@
     <!-- Retiro -->
     <div class="bg-white border border-slate-200 rounded-xl p-6 shadow-sm">
       <div class="flex items-center gap-2 mb-4">
-        <i data-lucide="minus-circle" class="w-4 h-4 text-red-500"></i>
+        <i data-lucide="minus-circle" class="w-4 h-4 text-rose-500"></i>
         <h2 class="text-sm font-semibold text-slate-800">Retirar Fichas</h2>
       </div>
       <form method="post" action="{% url 'wallet_retirar' %}">
@@ -154,7 +154,7 @@
           type="submit"
           class="w-full bg-white border border-slate-200 hover:bg-slate-50 text-slate-800 font-medium px-4 py-2.5 rounded-lg text-sm transition-colors flex items-center justify-center gap-2"
         >
-          <i data-lucide="arrow-up-circle" class="w-4 h-4 text-red-500"></i>
+          <i data-lucide="arrow-up-circle" class="w-4 h-4 text-rose-500"></i>
           Retirar
         </button>
       </form>

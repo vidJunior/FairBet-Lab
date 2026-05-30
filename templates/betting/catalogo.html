@@ -148,7 +148,7 @@
             <div class="grid grid-cols-3 gap-3">
               {% for seleccion in mercado.selecciones.all %}
               <button type="button" id="btn-seleccion-{{ seleccion.id }}" {% if not mercado.activo %}disabled{% endif %}
-                onclick="seleccionarCuota('{{ seleccion.id }}', '{{ seleccion.nombre }}', '{{ seleccion.cuota|stringformat:".2f" }}', '{{ evento.local }} vs {{ evento.visitante }}', '{{ mercado.id }}')" class="border px-3 py-3.5 rounded-2xl transition-all duration-200 text-center flex flex-col justify-center items-center group shadow-2xs hover:shadow-sm
+                onclick="seleccionarCuota('{{ seleccion.id }}', '{{ seleccion.nombre }}', '{{ seleccion.cuota|stringformat:".2f" }}', '{{ evento.local }} vs {{ evento.visitante }}', '{{ mercado.id }}')" class="border px-3 py-3.5 rounded-2xl transition-all duration-200 text-center flex flex-col justify-center items-center group shadow-sm hover:shadow-sm
                           {% if not mercado.activo %}
                             opacity-50 cursor-not-allowed bg-slate-100 border-slate-200
                           {% else %}
@@ -193,7 +193,7 @@
               <div class="grid grid-cols-3 gap-3">
                 {% for seleccion in mercado.selecciones.all %}
                 <button type="button" id="btn-seleccion-{{ seleccion.id }}" {% if not mercado.activo %}disabled{% endif %}
-                  onclick="seleccionarCuota('{{ seleccion.id }}', '{{ seleccion.nombre }}', '{{ seleccion.cuota|stringformat:".2f" }}', '{{ evento.local }} vs {{ evento.visitante }}', '{{ mercado.id }}')" class="border px-3 py-3.5 rounded-2xl transition-all duration-200 text-center flex flex-col justify-center items-center group shadow-2xs hover:shadow-sm
+                  onclick="seleccionarCuota('{{ seleccion.id }}', '{{ seleccion.nombre }}', '{{ seleccion.cuota|stringformat:".2f" }}', '{{ evento.local }} vs {{ evento.visitante }}', '{{ mercado.id }}')" class="border px-3 py-3.5 rounded-2xl transition-all duration-200 text-center flex flex-col justify-center items-center group shadow-sm hover:shadow-sm
                             {% if not mercado.activo %}
                               opacity-50 cursor-not-allowed bg-slate-100 border-slate-200
                             {% else %}
@@ -254,7 +254,7 @@
             </div>
             <div class="flex flex-col items-center px-4 text-center">
               <span
-                class="bg-slate-50 border border-slate-200/60 px-3 py-1.5 rounded-full text-xs text-slate-400 font-black tracking-widest uppercase shadow-2xs">VS</span>
+                class="bg-slate-50 border border-slate-200/60 px-3 py-1.5 rounded-full text-xs text-slate-400 font-black tracking-widest uppercase shadow-sm">VS</span>
             </div>
             <div class="flex-1 text-center md:text-left">
               <span class="text-xl font-black text-slate-800 tracking-tight block">{{ evento.visitante }}</span>
@@ -273,7 +273,7 @@
             <div class="grid grid-cols-3 gap-3">
               {% for seleccion in mercado.selecciones.all %}
               <button type="button" id="btn-seleccion-{{ seleccion.id }}"
-                onclick="seleccionarCuota('{{ seleccion.id }}', '{{ seleccion.nombre }}', '{{ seleccion.cuota|stringformat:".2f" }}', '{{ evento.local }} vs {{ evento.visitante }}', '{{ mercado.id }}')" class="border px-3 py-3.5 rounded-2xl transition-all duration-200 text-center flex flex-col justify-center items-center group shadow-2xs hover:shadow-sm bg-white border-slate-200/60 hover:border-indigo-500 hover:bg-indigo-50/30 active:scale-95">
+                onclick="seleccionarCuota('{{ seleccion.id }}', '{{ seleccion.nombre }}', '{{ seleccion.cuota|stringformat:".2f" }}', '{{ evento.local }} vs {{ evento.visitante }}', '{{ mercado.id }}')" class="border px-3 py-3.5 rounded-2xl transition-all duration-200 text-center flex flex-col justify-center items-center group shadow-sm hover:shadow-sm bg-white border-slate-200/60 hover:border-indigo-500 hover:bg-indigo-50/30 active:scale-95">
                 <span
                   class="text-[10px] text-slate-500 font-bold group-hover:text-indigo-600 transition-colors uppercase tracking-widest mb-1">{{ seleccion.nombre }}</span>
                 <span id="cuota-val-{{ seleccion.id }}"
@@ -306,7 +306,7 @@
               <div class="grid grid-cols-3 gap-3">
                 {% for seleccion in mercado.selecciones.all %}
                 <button type="button" id="btn-seleccion-{{ seleccion.id }}"
-                  onclick="seleccionarCuota('{{ seleccion.id }}', '{{ seleccion.nombre }}', '{{ seleccion.cuota|stringformat:".2f" }}', '{{ evento.local }} vs {{ evento.visitante }}', '{{ mercado.id }}')" class="border px-3 py-3.5 rounded-2xl transition-all duration-200 text-center flex flex-col justify-center items-center group shadow-2xs hover:shadow-sm bg-white border-slate-200/60 hover:border-indigo-500 hover:bg-indigo-50/30 active:scale-95">
+                  onclick="seleccionarCuota('{{ seleccion.id }}', '{{ seleccion.nombre }}', '{{ seleccion.cuota|stringformat:".2f" }}', '{{ evento.local }} vs {{ evento.visitante }}', '{{ mercado.id }}')" class="border px-3 py-3.5 rounded-2xl transition-all duration-200 text-center flex flex-col justify-center items-center group shadow-sm hover:shadow-sm bg-white border-slate-200/60 hover:border-indigo-500 hover:bg-indigo-50/30 active:scale-95">
                   <span
                     class="text-[10px] text-slate-500 font-bold group-hover:text-indigo-600 transition-colors uppercase tracking-widest mb-1">{{ seleccion.nombre }}</span>
                   <span id="cuota-val-{{ seleccion.id }}"
@@ -823,15 +823,15 @@
           </div>
 
           <!-- Retorno Potencial -->
-          <div class="bg-[#191e24] rounded-xl p-3.5 flex items-center justify-between shadow-lg">
+          <div class="bg-slate-900 rounded-xl p-3.5 flex items-center justify-between shadow-lg">
             <span class="text-white/60 font-black uppercase tracking-widest text-[10px]" id="texto-retorno">Ganancias
               Potenciales</span>
-            <span id="retorno-potencial" class="font-black text-[#00e676] text-xl font-mono">f. 0.00</span>
+            <span id="retorno-potencial" class="font-black text-emerald-400 text-xl font-mono">f. 0.00</span>
           </div>
 
           <!-- Botón Apostar (estilo Betano verde) -->
           <button type="submit" disabled id="btn-apostar" onclick="prepararSubmit(event)"
-            class="w-full bg-[#34a853] hover:bg-[#2e964a] disabled:bg-slate-300 disabled:cursor-not-allowed text-white font-black py-3 rounded-xl shadow-lg transition-all duration-200 text-xs flex items-center justify-center gap-2 uppercase tracking-widest">
+            class="w-full bg-emerald-600 hover:bg-emerald-700 disabled:bg-slate-300 disabled:cursor-not-allowed text-white font-black py-3 rounded-xl shadow-lg transition-all duration-200 text-xs flex items-center justify-center gap-2 uppercase tracking-widest">
             <span>Apuesta</span>
           </button>
         </form>
@@ -977,7 +977,7 @@
           const buttons = card.querySelectorAll(`[id^="btn-seleccion-"]`);
           buttons.forEach(btn => {
             btn.setAttribute("disabled", "true");
-            btn.className = "border px-3 py-3.5 rounded-2xl transition-all duration-200 text-center flex flex-col justify-center items-center group shadow-2xs opacity-50 cursor-not-allowed bg-slate-100 border-slate-200";
+            btn.className = "border px-3 py-3.5 rounded-2xl transition-all duration-200 text-center flex flex-col justify-center items-center group shadow-sm opacity-50 cursor-not-allowed bg-slate-100 border-slate-200";
           });
           const mText = card.querySelectorAll(`[id^="suspendido-text-"]`);
           mText.forEach(el => el.classList.remove("hidden"));
@@ -994,7 +994,7 @@
           const buttons = card.querySelectorAll(`[id^="btn-seleccion-"]`);
           buttons.forEach(btn => {
             btn.removeAttribute("disabled");
-            btn.className = "bg-white border border-slate-200/60 hover:border-indigo-500 hover:bg-indigo-50/30 px-3 py-3.5 rounded-2xl transition-all duration-200 text-center flex flex-col justify-center items-center group shadow-2xs hover:shadow-sm active:scale-95";
+            btn.className = "bg-white border border-slate-200/60 hover:border-indigo-500 hover:bg-indigo-50/30 px-3 py-3.5 rounded-2xl transition-all duration-200 text-center flex flex-col justify-center items-center group shadow-sm hover:shadow-sm active:scale-95";
           });
           const mText = card.querySelectorAll(`[id^="suspendido-text-"]`);
           mText.forEach(el => el.classList.add("hidden"));
@@ -1186,8 +1186,8 @@
       const eventoNombre = `${evento.local} vs ${evento.visitante}`;
       const disabled = (!mercado.activo || deshabilitado) ? 'disabled' : '';
       const claseBtn = disabled
-        ? 'border px-3 py-3.5 rounded-2xl transition-all duration-200 text-center flex flex-col justify-center items-center group shadow-2xs opacity-50 cursor-not-allowed bg-slate-100 border-slate-200'
-        : 'bg-white border border-slate-200/60 hover:border-indigo-500 hover:bg-indigo-50/30 px-3 py-3.5 rounded-2xl transition-all duration-200 text-center flex flex-col justify-center items-center group shadow-2xs hover:shadow-sm active:scale-95';
+        ? 'border px-3 py-3.5 rounded-2xl transition-all duration-200 text-center flex flex-col justify-center items-center group shadow-sm opacity-50 cursor-not-allowed bg-slate-100 border-slate-200'
+        : 'bg-white border border-slate-200/60 hover:border-indigo-500 hover:bg-indigo-50/30 px-3 py-3.5 rounded-2xl transition-all duration-200 text-center flex flex-col justify-center items-center group shadow-sm hover:shadow-sm active:scale-95';
       const onclickAttr = disabled ? '' : `onclick="seleccionarCuota('${sel.id}', '${sel.nombre}', '${cuotaFmt}', '${eventoNombre}', '${mercado.id}')"` ;
       return `<button type="button" id="btn-seleccion-${sel.id}" ${disabled} ${onclickAttr} class="${claseBtn}">
         <span class="text-[10px] text-slate-500 font-bold group-hover:text-indigo-600 transition-colors uppercase tracking-widest mb-1">${sel.nombre}</span>
@@ -1242,7 +1242,7 @@
       marcadorHTML = `<div class="flex items-center justify-between py-2 mb-4 gap-4">
         <div class="flex-1 text-center md:text-right"><span class="text-xl font-black text-slate-800 tracking-tight block">${evento.local}</span></div>
         <div class="flex flex-col items-center px-4 text-center">
-          <span class="bg-slate-50 border border-slate-200/60 px-3 py-1.5 rounded-full text-xs text-slate-400 font-black tracking-widest uppercase shadow-2xs">VS</span>
+          <span class="bg-slate-50 border border-slate-200/60 px-3 py-1.5 rounded-full text-xs text-slate-400 font-black tracking-widest uppercase shadow-sm">VS</span>
         </div>
         <div class="flex-1 text-center md:text-left"><span class="text-xl font-black text-slate-800 tracking-tight block">${evento.visitante}</span></div>
       </div>`;

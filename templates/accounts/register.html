@@ -26,11 +26,11 @@
   <div class="mb-6 space-y-2">
     {% for message in messages %}
     <div
-      class="p-3.5 rounded-lg text-sm flex items-start gap-3 bg-red-50 border border-red-200 text-red-800"
+      class="p-3.5 rounded-lg text-sm flex items-start gap-3 bg-rose-50 border border-rose-200 text-rose-800"
     >
       <i
         data-lucide="alert-triangle"
-        class="w-4 h-4 text-red-600 shrink-0 mt-0.5"
+        class="w-4 h-4 text-rose-600 shrink-0 mt-0.5"
       ></i>
       <span>{{ message }}</span>
     </div>
@@ -56,7 +56,7 @@
         >
         {{ form.username }}
         <p
-          class="text-red-600 text-xs mt-1 {% if not form.username.errors %}hidden{% endif %}"
+          class="text-rose-600 text-xs mt-1 {% if not form.username.errors %}hidden{% endif %}"
           id="error-username"
         >
           {% if form.username.errors %}
@@ -73,7 +73,7 @@
         >
         {{ form.email }}
         <p
-          class="text-red-600 text-xs mt-1 {% if not form.email.errors %}hidden{% endif %}"
+          class="text-rose-600 text-xs mt-1 {% if not form.email.errors %}hidden{% endif %}"
           id="error-email"
         >
           {% if form.email.errors %}
@@ -92,7 +92,7 @@
         >
         {{ form.first_name }}
         <p
-          class="text-red-600 text-xs mt-1 {% if not form.first_name.errors %}hidden{% endif %}"
+          class="text-rose-600 text-xs mt-1 {% if not form.first_name.errors %}hidden{% endif %}"
           id="error-first_name"
         >
           {% if form.first_name.errors %}
@@ -109,7 +109,7 @@
         >
         {{ form.last_name }}
         <p
-          class="text-red-600 text-xs mt-1 {% if not form.last_name.errors %}hidden{% endif %}"
+          class="text-rose-600 text-xs mt-1 {% if not form.last_name.errors %}hidden{% endif %}"
           id="error-last_name"
         >
           {% if form.last_name.errors %}
@@ -128,7 +128,7 @@
         >
         {{ form.password }}
         <p
-          class="text-red-600 text-xs mt-1 {% if not form.password.errors %}hidden{% endif %}"
+          class="text-rose-600 text-xs mt-1 {% if not form.password.errors %}hidden{% endif %}"
           id="error-password"
         >
           {% if form.password.errors %}
@@ -145,7 +145,7 @@
         >
         {{ form.password_confirm }}
         <p
-          class="text-red-600 text-xs mt-1 {% if not form.password_confirm.errors %}hidden{% endif %}"
+          class="text-rose-600 text-xs mt-1 {% if not form.password_confirm.errors %}hidden{% endif %}"
           id="error-password-confirm"
         >
           {% if form.password_confirm.errors %}
@@ -163,7 +163,7 @@
       >
       {{ form.fecha_nacimiento }}
       <p
-        class="text-red-600 text-xs mt-1 {% if not form.fecha_nacimiento.errors %}hidden{% endif %}"
+        class="text-rose-600 text-xs mt-1 {% if not form.fecha_nacimiento.errors %}hidden{% endif %}"
         id="error-fecha_nacimiento"
       >
         {% if form.fecha_nacimiento.errors %}
@@ -187,7 +187,7 @@
           >
           {{ form.dni }}
           <p
-            class="text-red-600 text-xs mt-1 {% if not form.dni.errors %}hidden{% endif %}"
+            class="text-rose-600 text-xs mt-1 {% if not form.dni.errors %}hidden{% endif %}"
             id="error-dni"
           >
             {% if form.dni.errors %}
@@ -204,7 +204,7 @@
           >
           {{ form.digito_verificador }}
           <p
-            class="text-red-600 text-xs mt-1 {% if not form.digito_verificador.errors %}hidden{% endif %}"
+            class="text-rose-600 text-xs mt-1 {% if not form.digito_verificador.errors %}hidden{% endif %}"
             id="error-digito_verificador"
           >
             {% if form.digito_verificador.errors %}

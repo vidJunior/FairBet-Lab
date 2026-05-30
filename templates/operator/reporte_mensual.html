@@ -25,7 +25,7 @@
                 <div class="w-px h-6 bg-slate-200 mx-1"></div>
                 <!-- Botón Cerrar Sesión -->
                 <a href="{% url 'logout_html' %}"
-                   class="px-4 py-2 rounded-xl bg-red-50 hover:bg-red-600 text-red-600 hover:text-white font-semibold text-sm transition-all border border-red-200 hover:border-red-600 flex items-center gap-1.5 group"
+                   class="px-4 py-2 rounded-xl bg-rose-50 hover:bg-rose-600 text-rose-600 hover:text-white font-semibold text-sm transition-all border border-rose-200 hover:border-rose-600 flex items-center gap-1.5 group"
                    title="Cerrar sesión del panel">
                     <i data-lucide="log-out" class="w-4 h-4 transition-transform group-hover:-translate-x-0.5"></i>
                     Cerrar Sesión
@@ -74,19 +74,19 @@
             </h3>
 
             <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
-                <div class="bg-white border border-slate-200 rounded-xl p-5 shadow-2xs space-y-1">
+                <div class="bg-white border border-slate-200 rounded-xl p-5 shadow-sm space-y-1">
                     <p class="text-xs font-bold uppercase tracking-wider text-slate-500">Total Apostado</p>
                     <p class="text-2xl font-black font-mono text-slate-900">f. {{ summary.total_apostado }}</p>
                 </div>
-                <div class="bg-white border border-slate-200 rounded-xl p-5 shadow-2xs space-y-1">
+                <div class="bg-white border border-slate-200 rounded-xl p-5 shadow-sm space-y-1">
                     <p class="text-xs font-bold uppercase tracking-wider text-slate-500">Total Ganadas</p>
                     <p class="text-2xl font-black font-mono text-emerald-600">f. {{ summary.total_ganadas_monto }}</p>
                 </div>
-                <div class="bg-white border border-slate-200 rounded-xl p-5 shadow-2xs space-y-1">
+                <div class="bg-white border border-slate-200 rounded-xl p-5 shadow-sm space-y-1">
                     <p class="text-xs font-bold uppercase tracking-wider text-slate-500">GGR del Mes</p>
                     <p class="text-2xl font-black font-mono text-indigo-600">f. {{ summary.ggr_mes }}</p>
                 </div>
-                <div class="bg-white border border-slate-200 rounded-xl p-5 shadow-2xs space-y-1">
+                <div class="bg-white border border-slate-200 rounded-xl p-5 shadow-sm space-y-1">
                     <p class="text-xs font-bold uppercase tracking-wider text-slate-500">N° Apuestas</p>
                     <p class="text-2xl font-black font-mono text-violet-600">{{ summary.num_apuestas }}</p>
                 </div>
@@ -98,21 +98,21 @@
                     Columnas del CSV Exportado (Normativa MINCETUR)
                 </h4>
                 <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3 text-xs font-semibold text-slate-600">
-                    <span class="bg-white border border-slate-200/60 p-2 rounded-lg text-center shadow-3xs">fecha</span>
-                    <span class="bg-white border border-slate-200/60 p-2 rounded-lg text-center shadow-3xs">tipo_juego</span>
-                    <span class="bg-white border border-slate-200/60 p-2 rounded-lg text-center shadow-3xs">tipo_apuesta</span>
-                    <span class="bg-white border border-slate-200/60 p-2 rounded-lg text-center shadow-3xs">evento_id</span>
-                    <span class="bg-white border border-slate-200/60 p-2 rounded-lg text-center shadow-3xs">evento</span>
-                    <span class="bg-white border border-slate-200/60 p-2 rounded-lg text-center shadow-3xs">mercado</span>
-                    <span class="bg-white border border-slate-200/60 p-2 rounded-lg text-center shadow-3xs">seleccion</span>
-                    <span class="bg-white border border-slate-200/60 p-2 rounded-lg text-center shadow-3xs">monto_apostado</span>
-                    <span class="bg-white border border-slate-200/60 p-2 rounded-lg text-center shadow-3xs">cuota</span>
-                    <span class="bg-white border border-slate-200/60 p-2 rounded-lg text-center shadow-3xs">monto_ganado</span>
-                    <span class="bg-white border border-slate-200/60 p-2 rounded-lg text-center shadow-3xs">ggr</span>
-                    <span class="bg-white border border-slate-200/60 p-2 rounded-lg text-center shadow-3xs">usuario_dni</span>
-                    <span class="bg-white border border-slate-200/60 p-2 rounded-lg text-center shadow-3xs">usuario_nombre</span>
-                    <span class="bg-white border border-slate-200/60 p-2 rounded-lg text-center shadow-3xs">estado_apuesta</span>
-                    <span class="bg-white border border-slate-200/60 p-2 rounded-lg text-center shadow-3xs">usar_bono</span>
+                    <span class="bg-white border border-slate-200/60 p-2 rounded-lg text-center ">fecha</span>
+                    <span class="bg-white border border-slate-200/60 p-2 rounded-lg text-center ">tipo_juego</span>
+                    <span class="bg-white border border-slate-200/60 p-2 rounded-lg text-center ">tipo_apuesta</span>
+                    <span class="bg-white border border-slate-200/60 p-2 rounded-lg text-center ">evento_id</span>
+                    <span class="bg-white border border-slate-200/60 p-2 rounded-lg text-center ">evento</span>
+                    <span class="bg-white border border-slate-200/60 p-2 rounded-lg text-center ">mercado</span>
+                    <span class="bg-white border border-slate-200/60 p-2 rounded-lg text-center ">seleccion</span>
+                    <span class="bg-white border border-slate-200/60 p-2 rounded-lg text-center ">monto_apostado</span>
+                    <span class="bg-white border border-slate-200/60 p-2 rounded-lg text-center ">cuota</span>
+                    <span class="bg-white border border-slate-200/60 p-2 rounded-lg text-center ">monto_ganado</span>
+                    <span class="bg-white border border-slate-200/60 p-2 rounded-lg text-center ">ggr</span>
+                    <span class="bg-white border border-slate-200/60 p-2 rounded-lg text-center ">usuario_dni</span>
+                    <span class="bg-white border border-slate-200/60 p-2 rounded-lg text-center ">usuario_nombre</span>
+                    <span class="bg-white border border-slate-200/60 p-2 rounded-lg text-center ">estado_apuesta</span>
+                    <span class="bg-white border border-slate-200/60 p-2 rounded-lg text-center ">usar_bono</span>
                 </div>
             </div>
         </div>

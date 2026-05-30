@@ -26,11 +26,11 @@
   <div class="mb-6 space-y-2">
     {% for message in messages %}
     <div
-      class="p-3.5 rounded-lg text-sm flex items-start gap-3 {% if message.tags == 'success' %}bg-emerald-50 border border-emerald-200 text-emerald-800{% else %}bg-red-50 border border-red-200 text-red-800{% endif %}"
+      class="p-3.5 rounded-lg text-sm flex items-start gap-3 {% if message.tags == 'success' %}bg-emerald-50 border border-emerald-200 text-emerald-800{% else %}bg-rose-50 border border-rose-200 text-rose-800{% endif %}"
     >
       <i
         data-lucide="{% if message.tags == 'success' %}check-circle{% else %}alert-triangle{% endif %}"
-        class="w-4 h-4 {% if message.tags == 'success' %}text-emerald-600{% else %}text-red-600{% endif %} shrink-0 mt-0.5 animate-pulse"
+        class="w-4 h-4 {% if message.tags == 'success' %}text-emerald-600{% else %}text-rose-600{% endif %} shrink-0 mt-0.5 animate-pulse"
       ></i>
       <div>
         <span class="font-bold block text-slate-900 mb-0.5">
@@ -60,7 +60,7 @@
         >{{ form.username.label }}</label
       >
       {{ form.username }} {% if form.username.errors %}
-      <p class="text-red-600 text-xs mt-1">
+      <p class="text-rose-600 text-xs mt-1">
         {{ form.username.errors|join:", " }}
       </p>
       {% endif %}
@@ -73,7 +73,7 @@
         >{{ form.password.label }}</label
       >
       {{ form.password }} {% if form.password.errors %}
-      <p class="text-red-600 text-xs mt-1">
+      <p class="text-rose-600 text-xs mt-1">
         {{ form.password.errors|join:", " }}
       </p>
       {% endif %}

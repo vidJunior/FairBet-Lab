@@ -37,7 +37,7 @@ class BonoCreateSerializer(serializers.Serializer):
     tipo = serializers.ChoiceField(choices=TipoBono.choices)
     monto = serializers.DecimalField(max_digits=10, decimal_places=4)
     rollover_multiplier = serializers.DecimalField(
-        max_digits=4, decimal_places=2, default=Decimal("5.00"), required=False
+        max_digits=6, decimal_places=2, default=Decimal("5.00"), required=False
     )
     expira = serializers.DateTimeField(required=False, allow_null=True)
 

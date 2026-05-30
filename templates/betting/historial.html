@@ -173,23 +173,23 @@
               <!-- Badge de Estado -->
               <div>
                 {% if apuesta.estado == 'accepted' %}
-                  <span class="px-3.5 py-1.5 rounded-full text-xs font-extrabold tracking-wider uppercase bg-indigo-50 text-indigo-700 border border-indigo-200/80 shadow-3xs">
+                  <span class="px-3.5 py-1.5 rounded-full text-xs font-extrabold tracking-wider uppercase bg-indigo-50 text-indigo-700 border border-indigo-200/80 ">
                     Pendiente
                   </span>
                 {% elif apuesta.estado == 'won' %}
-                  <span class="px-3.5 py-1.5 rounded-full text-xs font-extrabold tracking-wider uppercase bg-emerald-50 text-emerald-700 border border-emerald-200/80 shadow-3xs flex items-center gap-1">
+                  <span class="px-3.5 py-1.5 rounded-full text-xs font-extrabold tracking-wider uppercase bg-emerald-50 text-emerald-700 border border-emerald-200/80  flex items-center gap-1">
                     <i data-lucide="check" class="w-3.5 h-3.5"></i> Ganada
                   </span>
                 {% elif apuesta.estado == 'lost' %}
-                  <span class="px-3.5 py-1.5 rounded-full text-xs font-extrabold tracking-wider uppercase bg-rose-50 text-rose-700 border border-rose-200/80 shadow-3xs flex items-center gap-1">
+                  <span class="px-3.5 py-1.5 rounded-full text-xs font-extrabold tracking-wider uppercase bg-rose-50 text-rose-700 border border-rose-200/80  flex items-center gap-1">
                     <i data-lucide="x" class="w-3.5 h-3.5"></i> Perdida
                   </span>
                 {% elif apuesta.estado == 'cashed_out' %}
-                  <span class="px-3.5 py-1.5 rounded-full text-xs font-extrabold tracking-wider uppercase bg-amber-50 text-amber-700 border border-amber-200/80 shadow-3xs flex items-center gap-1">
+                  <span class="px-3.5 py-1.5 rounded-full text-xs font-extrabold tracking-wider uppercase bg-amber-50 text-amber-700 border border-amber-200/80  flex items-center gap-1">
                     <i data-lucide="arrow-left-right" class="w-3.5 h-3.5"></i> Retirada
                   </span>
                 {% else %}
-                  <span class="px-3.5 py-1.5 rounded-full text-xs font-extrabold tracking-wider uppercase bg-slate-100 text-slate-600 border border-slate-200 shadow-3xs">
+                  <span class="px-3.5 py-1.5 rounded-full text-xs font-extrabold tracking-wider uppercase bg-slate-100 text-slate-600 border border-slate-200 ">
                     Cancelada
                   </span>
                 {% endif %}

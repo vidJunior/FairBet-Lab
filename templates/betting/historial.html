@@ -1,5 +1,5 @@
 {% extends 'base.html' %}
-{% load static %}
+{% load static l10n %}
 
 {% block title %}Historial de Apuestas - FairBet Lab{% endblock %}
 
@@ -40,7 +40,7 @@
       </div>
       <div>
         <p class="text-[10px] uppercase tracking-widest font-extrabold text-indigo-200">Saldo Disponible</p>
-        <p class="text-2xl font-black font-mono tracking-tight text-white mt-0.5">f. {{ saldo|floatformat:2 }}</p>
+        <p class="text-2xl font-black font-mono tracking-tight text-white mt-0.5">f. {{ saldo|stringformat:".2f" }}</p>
       </div>
     </div>
   </div>
@@ -56,7 +56,7 @@
           <i data-lucide="trending-up" class="w-4 h-4"></i>
         </div>
       </div>
-      <p class="text-xl font-black font-mono text-slate-900">f. {{ total_apostado|floatformat:2 }}</p>
+      <p class="text-xl font-black font-mono text-slate-900">f. {{ total_apostado|stringformat:".2f" }}</p>
     </div>
 
     <!-- Total Retornado -->
@@ -67,7 +67,7 @@
           <i data-lucide="coins" class="w-4 h-4"></i>
         </div>
       </div>
-      <p class="text-xl font-black font-mono text-slate-900">f. {{ total_retornado|floatformat:2 }}</p>
+      <p class="text-xl font-black font-mono text-slate-900">f. {{ total_retornado|stringformat:".2f" }}</p>
     </div>
 
     <!-- Balance Neto -->
@@ -85,7 +85,7 @@
         {% endif %}
       </div>
       <p class="text-xl font-black font-mono {% if net_balance >= 0 %}text-emerald-600{% else %}text-rose-600{% endif %}">
-        {% if net_balance >= 0 %}+{% endif %}f. {{ net_balance|floatformat:2 }}
+        {% if net_balance >= 0 %}+{% endif %}f. {{ net_balance|stringformat:".2f" }}
       </p>
     </div>
 
@@ -208,7 +208,7 @@
                   </div>
                   <div>
                     <span class="font-mono font-black text-slate-800 text-sm bg-slate-100 border border-slate-200 px-2.5 py-1 rounded-xl">
-                      @{{ apuesta.cuota_fijada|floatformat:2 }}
+                      @{{ apuesta.cuota_fijada|stringformat:".2f" }}
                     </span>
                   </div>
                 </div>
@@ -231,7 +231,7 @@
                           </span>
                         </div>
                         <span class="font-mono font-black text-indigo-700 text-xs bg-indigo-50 border border-indigo-100/60 px-2 py-0.5 rounded-lg">
-                          @{{ detalle.cuota_fijada|floatformat:2 }}
+                          @{{ detalle.cuota_fijada|stringformat:".2f" }}
                         </span>
                       </div>
                     {% endfor %}
@@ -245,27 +245,27 @@
               <div class="grid grid-cols-3 gap-6 w-full sm:w-auto">
                 <div>
                   <span class="text-[9px] font-extrabold uppercase tracking-widest text-slate-400 block">Importe</span>
-                  <span class="font-mono font-black text-slate-700 text-sm">f. {{ apuesta.monto|floatformat:2 }}</span>
+                  <span class="font-mono font-black text-slate-700 text-sm">f. {{ apuesta.monto|stringformat:".2f" }}</span>
                 </div>
                 <div>
                   <span class="text-[9px] font-extrabold uppercase tracking-widest text-slate-400 block">Cuota Total</span>
-                  <span class="font-mono font-black text-slate-700 text-sm">@{{ apuesta.cuota_fijada|floatformat:2 }}</span>
+                  <span class="font-mono font-black text-slate-700 text-sm">@{{ apuesta.cuota_fijada|stringformat:".2f" }}</span>
                 </div>
                 <div>
                   {% if apuesta.estado == 'accepted' %}
                     <span class="text-[9px] font-extrabold uppercase tracking-widest text-slate-400 block">Retorno Potencial</span>
-                    <span class="font-mono font-black text-indigo-600 text-sm">f. {{ apuesta.payout|floatformat:2 }}</span>
+                    <span class="font-mono font-black text-indigo-600 text-sm">f. {{ apuesta.payout|stringformat:".2f" }}</span>
                   {% else %}
                     <span class="text-[9px] font-extrabold uppercase tracking-widest text-slate-400 block">Resultado</span>
                     <span class="font-mono font-black text-sm {% if apuesta.estado == 'won' %}text-emerald-600{% elif apuesta.estado == 'lost' %}text-rose-600{% else %}text-amber-600{% endif %}">
-                      f. {{ apuesta.retorno|floatformat:2 }}
+                      f. {{ apuesta.retorno|stringformat:".2f" }}
                     </span>
                   {% endif %}
                 </div>
               </div>
 
               <!-- Acciones de Apuesta Activa (Cash Out) -->
-              {% if apuesta.estado == 'accepted' %}
+              {% if apuesta.estado == 'accepted' and not apuesta.usar_bono %}
                 <div class="flex items-center gap-3 w-full sm:w-auto justify-end">
                   <form action="{% url 'cashout_html' %}" method="POST" onsubmit="return confirm('¿Confirmas que deseas retirar esta apuesta ahora?');">
                     {% csrf_token %}

@@ -89,7 +89,7 @@
       {% if eventos_en_vivo %}
       <div class="space-y-5">
         {% for evento in eventos_en_vivo %}
-        <div
+        <div id="evento-card-{{ evento.id }}"
           class="bg-white border border-slate-200/80 rounded-3xl p-6 shadow-sm hover:shadow-md transition-all duration-300 relative overflow-hidden">
           <div class="absolute top-0 left-0 w-1 h-full bg-rose-500"></div>
           <div
@@ -229,7 +229,7 @@
       {% if eventos_programados %}
       <div class="space-y-5">
         {% for evento in eventos_programados %}
-        <div
+        <div id="evento-card-{{ evento.id }}"
           class="bg-white border border-slate-200/80 rounded-3xl p-6 shadow-sm hover:shadow-md transition-all duration-300 relative overflow-hidden">
           <div class="absolute top-0 left-0 w-1 h-full bg-indigo-400"></div>
           <div
@@ -360,7 +360,7 @@
       {% if eventos_finalizados %}
       <div class="space-y-5">
         {% for evento in eventos_finalizados %}
-        <div
+        <div id="evento-card-{{ evento.id }}"
           class="bg-white border border-slate-200/80 rounded-3xl p-6 shadow-sm hover:shadow-md transition-all duration-300 relative overflow-hidden">
           <div class="absolute top-0 left-0 w-1 h-full bg-slate-400"></div>
 
@@ -590,7 +590,7 @@
               <span class="text-slate-500">Inversión: f. {{ apuesta.monto|stringformat:".2f" }}</span>
               <span class="text-indigo-600">Gana: f. {{ apuesta.payout|stringformat:".2f" }}</span>
             </div>
-            {% if apuesta.cashout_val and apuesta.cashout_val > 0 %}
+            {% if apuesta.cashout_val and apuesta.cashout_val > 0 and not apuesta.usar_bono %}
             <form action="{% url 'cashout_html' %}" method="POST"
               onsubmit="return confirm('¿Retirar tu apuesta por f. {{ apuesta.cashout_val|stringformat:" .2f" }}? Se
               descontará un 5% de comisión.')">
@@ -795,6 +795,23 @@
           <!-- Contenedor de selecciones dinámico -->
           <div id="boleto-selecciones" class="space-y-2 max-h-[160px] overflow-y-auto pr-1 custom-scrollbar"></div>
 
+          <!-- Opción de Usar Bono (Switch elegante) -->
+          {% if tiene_bono_disponible %}
+          <div class="bg-indigo-50/70 border border-indigo-100 rounded-2xl p-3 flex items-center justify-between shadow-xs">
+            <div class="flex flex-col">
+              <span class="text-[10px] font-black text-indigo-700 uppercase tracking-widest flex items-center gap-1">
+                <i data-lucide="gift" class="w-3.5 h-3.5 text-indigo-600"></i>
+                Usar Saldo de Bono
+              </span>
+              <span class="text-[9px] text-slate-400 font-semibold mt-0.5">Disponible: f. {{ saldo_bono|stringformat:".2f" }}</span>
+            </div>
+            <label class="relative inline-flex items-center cursor-pointer select-none">
+              <input type="checkbox" name="usar_bono" id="switch-usar-bono" value="true" class="sr-only peer">
+              <div class="w-9 h-5 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-indigo-600"></div>
+            </label>
+          </div>
+          {% endif %}
+
           <!-- Input Global (Solo visible en Combinadas) -->
           <div id="boleto-input-combinada" class="hidden space-y-3 border-t border-slate-100 pt-3">
             <div class="flex justify-between items-end">
@@ -913,114 +930,384 @@
     }
   }
 
+  // ─── Cache de estado en vivo (WebSocket es fuente de verdad en tiempo real) ─
+  // Preserva los valores más frescos para re-aplicarlos tras re-renders del catálogo.
+  const liveCache = {
+    eventos: {},   // { [evento_id]: { periodo_display, goles_local, goles_visitante } }
+    cuotas:  {},   // { [seleccion_id]: cuota_str }
+  };
+
   // Conectar WebSocket para recibir cuotas y marcadores en tiempo real
-  const wsScheme = window.location.protocol === "https:" ? "wss" : "ws";
-  const oddsSocket = new WebSocket(`${wsScheme}://${window.location.host}/ws/live-odds/`);
+  let oddsSocket;
+  function connectLiveOddsSocket() {
+    const wsScheme = window.location.protocol === "https:" ? "wss" : "ws";
+    oddsSocket = new WebSocket(`${wsScheme}://${window.location.host}/ws/live-odds/`);
 
-  oddsSocket.onmessage = function (e) {
-    const data = JSON.parse(e.data);
-    console.log("WebSocket Recibido:", data);
+    oddsSocket.onmessage = function (e) {
+      const data = JSON.parse(e.data);
+      console.log("WebSocket Recibido:", data);
 
-    if (data.nuevas_cuotas) {
-      for (const [selId, nuevaCuota] of Object.entries(data.nuevas_cuotas)) {
-        const cuotaSpan = document.getElementById(`cuota-val-${selId}`);
-        if (cuotaSpan) {
-          cuotaSpan.innerText = parseFloat(nuevaCuota).toFixed(2);
-        }
+      if (data.nuevas_cuotas) {
+        for (const [selId, nuevaCuota] of Object.entries(data.nuevas_cuotas)) {
+          // Guardar en cache
+          liveCache.cuotas[selId] = nuevaCuota;
 
-        const btn = document.getElementById(`btn-seleccion-${selId}`);
-        if (btn) {
-          const oldOnclick = btn.getAttribute("onclick");
-          if (oldOnclick) {
-            const match = oldOnclick.match(/seleccionarCuota\('([^']*)',\s*'([^']*)',\s*'([^']*)',\s*'([^']*)',\s*'([^']*)'\)/);
-            if (match) {
-              btn.setAttribute("onclick", `seleccionarCuota('${match[1]}', '${match[2]}', '${parseFloat(nuevaCuota).toFixed(2)}', '${match[4]}', '${match[5]}')`);
+          const cuotaSpan = document.getElementById(`cuota-val-${selId}`);
+          if (cuotaSpan) {
+            cuotaSpan.innerText = parseFloat(nuevaCuota).toFixed(2);
+          }
+
+          const btn = document.getElementById(`btn-seleccion-${selId}`);
+          if (btn) {
+            const oldOnclick = btn.getAttribute("onclick");
+            if (oldOnclick) {
+              const match = oldOnclick.match(/seleccionarCuota\('([^']*)',\s*'([^']*)',\s*'([^']*)',\s*'([^']*)',\s*'([^']*)'\)/);
+              if (match) {
+                btn.setAttribute("onclick", `seleccionarCuota('${match[1]}', '${match[2]}', '${parseFloat(nuevaCuota).toFixed(2)}', '${match[4]}', '${match[5]}')`);
+              }
+            }
+          }
+          // Actualizar cuota en tiempo real en la lista de selecciones activas en memoria si está en el ticket
+          if (typeof selecciones !== "undefined" && Array.isArray(selecciones)) {
+            const selInTicket = selecciones.find(function (s) { return s.id == selId; });
+            if (selInTicket) {
+              selInTicket.cuota = parseFloat(nuevaCuota);
+              if (typeof renderizarBoleto === "function") {
+                renderizarBoleto();
+              }
             }
           }
         }
-        // Actualizar cuota en tiempo real en la lista de selecciones activas en memoria si está en el ticket
-        if (typeof selecciones !== "undefined" && Array.isArray(selecciones)) {
-          const selInTicket = selecciones.find(function (s) { return s.id == selId; });
-          if (selInTicket) {
-            selInTicket.cuota = parseFloat(nuevaCuota);
-            if (typeof renderizarBoleto === "function") {
-              renderizarBoleto();
-            }
+      }
+
+      if (data.estado_mercados === "SUSPENDIDOS") {
+        const card = document.getElementById(`evento-card-${data.evento_id}`);
+        if (card) {
+          const badge = card.querySelector(`[id^="evento-badge-"]`);
+          if (badge) {
+            badge.innerText = "SUSPENDIDO";
+            badge.className = "px-3 py-1 rounded-full uppercase tracking-wider text-[10px] font-extrabold shadow-sm bg-rose-100 text-rose-800 border border-rose-200 animate-pulse";
+          }
+          const buttons = card.querySelectorAll(`[id^="btn-seleccion-"]`);
+          buttons.forEach(btn => {
+            btn.setAttribute("disabled", "true");
+            btn.className = "border px-3 py-3.5 rounded-2xl transition-all duration-200 text-center flex flex-col justify-center items-center group shadow-2xs opacity-50 cursor-not-allowed bg-slate-100 border-slate-200";
+          });
+          const mText = card.querySelectorAll(`[id^="suspendido-text-"]`);
+          mText.forEach(el => el.classList.remove("hidden"));
+        }
+      }
+      else if (data.estado_mercados === "ACTIVOS") {
+        const card = document.getElementById(`evento-card-${data.evento_id}`);
+        if (card) {
+          const badge = card.querySelector(`[id^="evento-badge-"]`);
+          if (badge) {
+            badge.innerText = "EN VIVO";
+            badge.className = "px-3 py-1 rounded-full uppercase tracking-widest text-[10px] font-black shadow-sm bg-rose-50 text-rose-600 border border-rose-100 animate-pulse";
+          }
+          const buttons = card.querySelectorAll(`[id^="btn-seleccion-"]`);
+          buttons.forEach(btn => {
+            btn.removeAttribute("disabled");
+            btn.className = "bg-white border border-slate-200/60 hover:border-indigo-500 hover:bg-indigo-50/30 px-3 py-3.5 rounded-2xl transition-all duration-200 text-center flex flex-col justify-center items-center group shadow-2xs hover:shadow-sm active:scale-95";
+          });
+          const mText = card.querySelectorAll(`[id^="suspendido-text-"]`);
+          mText.forEach(el => el.classList.add("hidden"));
+        }
+      }
+
+      if (data.tipo_evento === "EVENTO_CRITICO") {
+        // Guardar en cache y actualizar DOM
+        const eid = data.evento_id;
+        if (!liveCache.eventos[eid]) liveCache.eventos[eid] = {};
+        liveCache.eventos[eid].goles_local = data.goles_local;
+        liveCache.eventos[eid].goles_visitante = data.goles_visitante;
+
+        const marcador = document.getElementById(`marcador-${eid}`);
+        if (marcador) marcador.innerText = `${data.goles_local} - ${data.goles_visitante}`;
+      }
+
+      if (data.tipo_evento === "EVENTO_TIEMPO") {
+        // Guardar en cache todos los valores en vivo
+        const eid = data.evento_id;
+        if (!liveCache.eventos[eid]) liveCache.eventos[eid] = {};
+        liveCache.eventos[eid].minuto_actual    = data.minuto_actual;
+        liveCache.eventos[eid].periodo          = data.periodo;
+        liveCache.eventos[eid].periodo_display  = data.periodo_display;
+        liveCache.eventos[eid].goles_local      = data.goles_local;
+        liveCache.eventos[eid].goles_visitante  = data.goles_visitante;
+
+        // Actualizar DOM directamente
+        const tiempoMarcador = document.getElementById(`tiempo-marcador-${eid}`);
+        if (tiempoMarcador) tiempoMarcador.innerText = data.periodo_display;
+        const marcador = document.getElementById(`marcador-${eid}`);
+        if (marcador) marcador.innerText = `${data.goles_local} - ${data.goles_visitante}`;
+
+        // Guardar nuevas cuotas en cache
+        if (data.nuevas_cuotas) {
+          for (const [selId, cuota] of Object.entries(data.nuevas_cuotas)) {
+            liveCache.cuotas[selId] = cuota;
+          }
+        }
+      }
+
+      if (data.tipo_evento === "EVENTO_EN_VIVO" && data.estado === "en_vivo") {
+        actualizarCatalogo("Evento pasó a EN VIVO");
+      }
+
+      if (data.tipo_evento === "EVENTO_FINALIZADO") {
+        actualizarCatalogo("Evento finalizado");
+      }
+
+      if (data.tipo_evento === "EVENTO_MODIFICADO") {
+        actualizarCatalogo("Evento modificado");
+      }
+
+      if (data.tipo_evento === "CATALOGO_ACTUALIZADO") {
+        actualizarCatalogo(data.motivo || "Actualización del operador");
+      }
+    };
+
+    oddsSocket.onclose = function (e) {
+      console.warn("Conexión WebSocket cerrada. Reintentando en 5s...");
+      setTimeout(() => {
+        try {
+          actualizarCatalogo("Reconexión WS");
+        } catch(err) {}
+        connectLiveOddsSocket();
+      }, 5000);
+    };
+  }
+
+  connectLiveOddsSocket();
+
+  // ─── Actualización dinámica del catálogo ──────────────────────────────────
+  // Se llama cuando llega un evento que cambia la estructura de las pestañas.
+  // Hace fetch al endpoint JSON y re-renderiza SOLO los contenedores de eventos.
+  let catalogoActualizando = false;
+
+  function actualizarCatalogo(motivo) {
+    if (catalogoActualizando) return;
+    catalogoActualizando = true;
+    console.log("[FairBet] Actualizando catálogo:", motivo);
+
+    fetch("/betting/api/catalogo/", { credentials: "same-origin" })
+      .then(r => r.json())
+      .then(data => {
+        renderizarTabEventos("en_vivo", data.en_vivo);
+        renderizarTabEventos("programados", data.programados);
+        renderizarTabEventos("finalizados", data.finalizados);
+        actualizarContadoresPestanas(data);
+        // Re-aplicar valores en vivo del cache SOBRE el snapshot de la DB
+        aplicarLiveCache();
+        // Reinicializar iconos Lucide en el nuevo HTML
+        if (window.lucide) lucide.createIcons();
+        mostrarToastActualizacion(motivo);
+      })
+      .catch(err => console.error("[FairBet] Error actualizando catálogo:", err))
+      .finally(() => { catalogoActualizando = false; });
+  }
+
+  // Aplica los valores en vivo cacheados al DOM tras un re-render
+  function aplicarLiveCache() {
+    // Restaurar minutos y marcadores en vivo
+    for (const [evId, estado] of Object.entries(liveCache.eventos)) {
+      if (estado.periodo_display !== undefined) {
+        const tiempoEl = document.getElementById(`tiempo-marcador-${evId}`);
+        if (tiempoEl) tiempoEl.innerText = estado.periodo_display;
+      }
+      if (estado.goles_local !== undefined && estado.goles_visitante !== undefined) {
+        const marcadorEl = document.getElementById(`marcador-${evId}`);
+        if (marcadorEl) marcadorEl.innerText = `${estado.goles_local} - ${estado.goles_visitante}`;
+      }
+    }
+    // Restaurar cuotas actualizadas en tiempo real
+    for (const [selId, cuota] of Object.entries(liveCache.cuotas)) {
+      const cuotaSpan = document.getElementById(`cuota-val-${selId}`);
+      if (cuotaSpan) cuotaSpan.innerText = parseFloat(cuota).toFixed(2);
+      const btn = document.getElementById(`btn-seleccion-${selId}`);
+      if (btn) {
+        const oldOnclick = btn.getAttribute("onclick");
+        if (oldOnclick) {
+          const match = oldOnclick.match(/seleccionarCuota\('([^']*)',\s*'([^']*)',\s*'([^']*)',\s*'([^']*)',\s*'([^']*)'\)/);
+          if (match) {
+            btn.setAttribute("onclick", `seleccionarCuota('${match[1]}', '${match[2]}', '${parseFloat(cuota).toFixed(2)}', '${match[4]}', '${match[5]}')`);
           }
         }
       }
     }
+  }
 
-    if (data.estado_mercados === "SUSPENDIDOS") {
-      const badge = document.getElementById(`evento-badge-${data.evento_id}`);
-      if (badge) {
-        badge.innerText = "SUSPENDIDO";
-        badge.className = "px-3 py-1 rounded-full uppercase tracking-wider text-[10px] font-extrabold shadow-sm bg-rose-100 text-rose-800 border border-rose-200 animate-pulse";
-      }
-      const evId = data.evento_id;
-      const buttons = document.querySelectorAll(`[id^="btn-seleccion-"]`);
-      buttons.forEach(btn => {
-        const clickAttr = btn.getAttribute("onclick");
-        if (clickAttr && clickAttr.includes(`vs`)) {
-          btn.setAttribute("disabled", "true");
-          btn.className = "border px-3 py-3.5 rounded-2xl transition-all duration-200 text-center flex flex-col justify-center items-center group shadow-2xs opacity-50 cursor-not-allowed bg-slate-100 border-slate-200";
-        }
-      });
-      const mText = document.querySelectorAll(`[id^="suspendido-text-"]`);
-      mText.forEach(el => el.classList.remove("hidden"));
-    }
-    else if (data.estado_mercados === "ACTIVOS") {
-      const badge = document.getElementById(`evento-badge-${data.evento_id}`);
-      if (badge) {
-        badge.innerText = "EN VIVO";
-        badge.className = "px-3 py-1 rounded-full uppercase tracking-widest text-[10px] font-black shadow-sm bg-rose-50 text-rose-600 border border-rose-100 animate-pulse";
-      }
-      const buttons = document.querySelectorAll(`[id^="btn-seleccion-"]`);
-      buttons.forEach(btn => {
-        btn.removeAttribute("disabled");
-        btn.className = "bg-white border border-slate-200/60 hover:border-indigo-500 hover:bg-indigo-50/30 px-3 py-3.5 rounded-2xl transition-all duration-200 text-center flex flex-col justify-center items-center group shadow-2xs hover:shadow-sm active:scale-95";
-      });
-      const mText = document.querySelectorAll(`[id^="suspendido-text-"]`);
-      mText.forEach(el => el.classList.add("hidden"));
-    }
-
-    if (data.tipo_evento === "EVENTO_CRITICO") {
-      const marcador = document.getElementById(`marcador-${data.evento_id}`);
-      if (marcador) {
-        marcador.innerText = `${data.goles_local} - ${data.goles_visitante}`;
+  function actualizarContadoresPestanas(data) {
+    const btnVivo = document.getElementById("btn-tab-eventos-en-vivo");
+    const btnProg = document.getElementById("btn-tab-eventos-programados");
+    if (btnVivo) {
+      // Conserva el icono de ping y solo cambia el texto del contador
+      const countSpan = btnVivo.querySelector("span.relative.flex");
+      const textoNodo = btnVivo.childNodes[btnVivo.childNodes.length - 1];
+      if (textoNodo && textoNodo.nodeType === Node.TEXT_NODE) {
+        textoNodo.textContent = ` En Vivo (${data.en_vivo.length})`;
+      } else {
+        btnVivo.lastChild.textContent = ` En Vivo (${data.en_vivo.length})`;
       }
     }
+    if (btnProg) {
+      const svgEl = btnProg.querySelector("i, svg");
+      const textoNodo = Array.from(btnProg.childNodes).find(n => n.nodeType === Node.TEXT_NODE && n.textContent.trim());
+      if (textoNodo) textoNodo.textContent = ` Programados (${data.programados.length})`;
+    }
+  }
 
-    if (data.tipo_evento === "EVENTO_TIEMPO") {
-      const tiempoMarcador = document.getElementById(`tiempo-marcador-${data.evento_id}`);
-      if (tiempoMarcador) {
-        tiempoMarcador.innerText = data.periodo_display;
-      }
-      const marcador = document.getElementById(`marcador-${data.evento_id}`);
-      if (marcador) {
-        marcador.innerText = `${data.goles_local} - ${data.goles_visitante}`;
-      }
+  function renderizarTabEventos(tipo, eventos) {
+    const contenedorId = tipo === "en_vivo" ? "tab-eventos-en-vivo"
+      : tipo === "programados" ? "tab-eventos-programados"
+      : "tab-eventos-finalizados";
+    const contenedor = document.getElementById(contenedorId);
+    if (!contenedor) return;
+
+    if (eventos.length === 0) {
+      const mensajes = {
+        en_vivo: '<div class="bg-white border border-slate-200 rounded-3xl p-12 text-center text-slate-500 shadow-sm"><div class="p-4 bg-slate-50 rounded-2xl w-fit mx-auto mb-4 border border-slate-100 text-slate-400"><i data-lucide="zap-off" class="w-10 h-10"></i></div><p class="font-bold text-slate-700 text-lg">No hay partidos en vivo</p><p class="text-sm text-slate-400 mt-1">Los partidos programados pasarán a esta sección cuando comiencen.</p></div>',
+        programados: '<div class="bg-white border border-slate-200 rounded-3xl p-12 text-center text-slate-500 shadow-sm"><div class="p-4 bg-slate-50 rounded-2xl w-fit mx-auto mb-4 border border-slate-100 text-slate-400"><i data-lucide="frown" class="w-10 h-10"></i></div><p class="font-bold text-slate-700 text-lg">No hay eventos programados</p></div>',
+        finalizados: '<div class="bg-white border border-slate-200 rounded-3xl p-12 text-center text-slate-500 shadow-sm"><div class="p-4 bg-slate-50 rounded-2xl w-fit mx-auto mb-4 border border-slate-100 text-slate-400"><i data-lucide="history" class="w-10 h-10"></i></div><p class="font-bold text-slate-700 text-lg">No hay partidos finalizados recientes</p></div>',
+      };
+      contenedor.innerHTML = mensajes[tipo] || '';
+      return;
     }
 
-    if (data.tipo_evento === "EVENTO_EN_VIVO" && data.estado === "en_vivo") {
-      window.location.reload();
+    const html = '<div class="space-y-5">' + eventos.map(ev => renderizarTarjetaEvento(tipo, ev)).join('') + '</div>';
+    contenedor.innerHTML = html;
+  }
+
+  function formatearFecha(isoStr) {
+    if (!isoStr) return '';
+    const d = new Date(isoStr);
+    const dias = ['Domingo','Lunes','Martes','Miércoles','Jueves','Viernes','Sábado'];
+    const meses = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+    const dia = dias[d.getDay()];
+    const fecha = `${d.getDate()} ${meses[d.getMonth()]} ${d.getFullYear()}`;
+    let h = d.getHours(); const m = String(d.getMinutes()).padStart(2,'0');
+    const ampm = h >= 12 ? 'PM' : 'AM'; h = h % 12 || 12;
+    return { fecha: `${dia}, ${fecha}`, hora: `${h}:${m} ${ampm}` };
+  }
+
+  function renderizarMercado1x2(mercado, evento, deshabilitado) {
+    const suspEl = mercado.resuelto
+      ? `<span class="text-[9px] font-black text-white bg-emerald-600 px-2 py-0.5 rounded-md uppercase tracking-widest flex items-center gap-1">🔒 Resuelto</span>`
+      : (!mercado.activo ? `<span class="text-[9px] font-black text-white bg-rose-500 px-2 py-0.5 rounded-md uppercase tracking-widest animate-pulse">Suspendido</span>` : '');
+
+    const botones = mercado.selecciones.map(sel => {
+      const cuotaFmt = parseFloat(sel.cuota).toFixed(2);
+      const eventoNombre = `${evento.local} vs ${evento.visitante}`;
+      const disabled = (!mercado.activo || deshabilitado) ? 'disabled' : '';
+      const claseBtn = disabled
+        ? 'border px-3 py-3.5 rounded-2xl transition-all duration-200 text-center flex flex-col justify-center items-center group shadow-2xs opacity-50 cursor-not-allowed bg-slate-100 border-slate-200'
+        : 'bg-white border border-slate-200/60 hover:border-indigo-500 hover:bg-indigo-50/30 px-3 py-3.5 rounded-2xl transition-all duration-200 text-center flex flex-col justify-center items-center group shadow-2xs hover:shadow-sm active:scale-95';
+      const onclickAttr = disabled ? '' : `onclick="seleccionarCuota('${sel.id}', '${sel.nombre}', '${cuotaFmt}', '${eventoNombre}', '${mercado.id}')"` ;
+      return `<button type="button" id="btn-seleccion-${sel.id}" ${disabled} ${onclickAttr} class="${claseBtn}">
+        <span class="text-[10px] text-slate-500 font-bold group-hover:text-indigo-600 transition-colors uppercase tracking-widest mb-1">${sel.nombre}</span>
+        <span id="cuota-val-${sel.id}" class="text-lg font-black text-slate-800 group-hover:text-indigo-700 transition-colors font-mono tracking-tight">${cuotaFmt}</span>
+      </button>`;
+    }).join('');
+
+    return `<div class="border-t border-slate-100 pt-4" id="mercado-${mercado.id}">
+      <div class="flex justify-between items-center mb-3">
+        <span class="text-[10px] font-black text-slate-400 uppercase tracking-widest bg-slate-50 px-2 py-1 rounded-md">${mercado.nombre}</span>
+        ${suspEl}
+      </div>
+      <div class="grid grid-cols-3 gap-3">${botones}</div>
+    </div>`;
+  }
+
+  function renderizarTarjetaEvento(tipo, evento) {
+    const mercado1x2 = evento.mercados.find(m => m.nombre === '1X2');
+    const otrosMercados = evento.mercados.filter(m => m.nombre !== '1X2');
+    const esFinalizados = tipo === 'finalizados';
+
+    let headerHTML = '';
+    let marcadorHTML = '';
+    let barraColor = 'bg-indigo-400';
+
+    if (tipo === 'en_vivo') {
+      barraColor = 'bg-rose-500';
+      const periodoDisplay = evento.periodo === 'ET' ? 'Entretiempo' : `${evento.minuto_actual}' - ${evento.periodo}`;
+      headerHTML = `<div class="flex justify-between items-center text-xs font-bold text-slate-400 mb-4 pb-3 border-b border-slate-50">
+        <span class="flex items-center gap-2 text-rose-500"><i data-lucide="radio" class="w-4 h-4 animate-pulse"></i> EN VIVO - SIMULACIÓN</span>
+        <span id="evento-badge-${evento.id}" class="px-3 py-1 rounded-full uppercase tracking-widest text-[10px] font-black shadow-sm bg-rose-50 text-rose-600 border border-rose-100 animate-pulse">EN VIVO</span>
+      </div>`;
+      marcadorHTML = `<div class="flex items-center justify-between py-2 mb-4 gap-4">
+        <div class="flex-1 text-center md:text-right"><span class="text-xl font-black text-slate-800 tracking-tight block">${evento.local}</span></div>
+        <div class="flex flex-col items-center px-4 text-center">
+          <span id="marcador-${evento.id}" class="bg-slate-900 text-white font-mono text-2xl font-black px-4 py-2 rounded-xl shadow-md border border-slate-800 tracking-widest">${evento.goles_local} - ${evento.goles_visitante}</span>
+          <span id="tiempo-marcador-${evento.id}" class="text-[11px] text-rose-600 font-black tracking-widest mt-2 px-3 py-1 rounded-full bg-rose-50 border border-rose-100/50 block uppercase animate-pulse">${periodoDisplay}</span>
+        </div>
+        <div class="flex-1 text-center md:text-left"><span class="text-xl font-black text-slate-800 tracking-tight block">${evento.visitante}</span></div>
+      </div>`;
+    } else if (tipo === 'programados') {
+      const f = formatearFecha(evento.fecha_inicio);
+      headerHTML = `<div class="flex flex-col sm:flex-row justify-between items-start sm:items-center text-xs font-bold text-slate-400 mb-4 pb-3 border-b border-slate-50 gap-2">
+        <div class="flex items-center gap-2">
+          <div class="p-1.5 bg-indigo-50 text-indigo-500 rounded-lg"><i data-lucide="calendar" class="w-4 h-4"></i></div>
+          <span class="text-indigo-900 font-black tracking-wide text-sm">${f.fecha}</span>
+          <span class="text-slate-400 font-medium">a las</span>
+          <span class="text-indigo-600 font-bold bg-indigo-50 px-2 py-0.5 rounded-md">${f.hora}</span>
+        </div>
+        <span id="evento-badge-${evento.id}" class="px-3 py-1 rounded-full uppercase tracking-wider text-[10px] font-extrabold shadow-sm bg-slate-50 text-slate-500 border border-slate-100">Programado</span>
+      </div>`;
+      marcadorHTML = `<div class="flex items-center justify-between py-2 mb-4 gap-4">
+        <div class="flex-1 text-center md:text-right"><span class="text-xl font-black text-slate-800 tracking-tight block">${evento.local}</span></div>
+        <div class="flex flex-col items-center px-4 text-center">
+          <span class="bg-slate-50 border border-slate-200/60 px-3 py-1.5 rounded-full text-xs text-slate-400 font-black tracking-widest uppercase shadow-2xs">VS</span>
+        </div>
+        <div class="flex-1 text-center md:text-left"><span class="text-xl font-black text-slate-800 tracking-tight block">${evento.visitante}</span></div>
+      </div>`;
+    } else {
+      // finalizados
+      barraColor = 'bg-slate-400';
+      const f = formatearFecha(evento.fecha_inicio);
+      headerHTML = `<div class="flex flex-col sm:flex-row justify-between items-start sm:items-center text-xs font-bold text-slate-400 mb-4 pb-3 border-b border-slate-50 gap-2">
+        <div class="flex items-center gap-2">
+          <div class="p-1.5 bg-slate-50 text-slate-500 rounded-lg"><i data-lucide="check-circle-2" class="w-4 h-4"></i></div>
+          <span class="text-slate-600 font-black tracking-wide text-sm">${f.fecha}</span>
+        </div>
+        <span class="px-3 py-1 rounded-full uppercase tracking-wider text-[10px] font-extrabold shadow-sm bg-slate-100 text-slate-500 border border-slate-200">FINALIZADO</span>
+      </div>`;
+      marcadorHTML = `<div class="flex items-center justify-between py-2 mb-4 gap-4">
+        <div class="flex-1 text-center md:text-right"><span class="text-xl font-black text-slate-800 tracking-tight block">${evento.local}</span></div>
+        <div class="flex flex-col items-center px-4 text-center">
+          <span class="bg-slate-200 text-slate-700 font-mono text-2xl font-black px-4 py-2 rounded-xl shadow-inner border border-slate-300 tracking-widest">${evento.goles_local} - ${evento.goles_visitante}</span>
+        </div>
+        <div class="flex-1 text-center md:text-left"><span class="text-xl font-black text-slate-800 tracking-tight block">${evento.visitante}</span></div>
+      </div>`;
     }
 
-    if (data.tipo_evento === "EVENTO_FINALIZADO") {
-      window.location.reload();
-    }
+    const mercado1x2HTML = mercado1x2 ? renderizarMercado1x2(mercado1x2, evento, esFinalizados) : '';
 
-    if (data.tipo_evento === "EVENTO_MODIFICADO") {
-      window.location.reload();
-    }
-  };
+    const otrosMercadosHTML = otrosMercados.length > 0
+      ? `<button type="button" onclick="toggleMercados(this)" class="w-full mt-3 px-4 py-2.5 text-[10px] font-bold text-indigo-600 hover:text-indigo-800 bg-indigo-50/30 hover:bg-indigo-50 flex items-center justify-center gap-1.5 border-t border-slate-100 transition-all rounded-b-xl">
+          <i data-lucide="plus-circle" class="w-3.5 h-3.5"></i><span>Más mercados</span>
+          <i data-lucide="chevron-down" class="w-3.5 h-3.5 ml-auto transition-transform duration-200"></i>
+        </button>
+        <div class="mercados-adicionales hidden">
+          ${otrosMercados.map(m => renderizarMercado1x2(m, evento, esFinalizados)).join('')}
+        </div>`
+      : '';
 
-  oddsSocket.onclose = function (e) {
-    console.error("Conexión WebSocket cerrada. Reintentando conectar...");
-    setTimeout(() => {
-      window.location.reload();
-    }, 5000);
-  };
+    return `<div id="evento-card-${evento.id}" class="bg-white border border-slate-200/80 rounded-3xl p-6 shadow-sm hover:shadow-md transition-all duration-300 relative overflow-hidden">
+      <div class="absolute top-0 left-0 w-1 h-full ${barraColor}"></div>
+      ${headerHTML}
+      ${marcadorHTML}
+      ${mercado1x2HTML}
+      ${otrosMercadosHTML}
+    </div>`;
+  }
+
+  function mostrarToastActualizacion(motivo) {
+    const toast = document.createElement('div');
+    toast.className = 'fixed bottom-6 right-6 z-50 bg-indigo-600 text-white px-5 py-3 rounded-2xl shadow-2xl flex items-center gap-3 text-sm font-bold animate-fade-in-up';
+    toast.innerHTML = `<svg class="w-5 h-5 text-indigo-200" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg><span>Catálogo actualizado</span>`;
+    document.body.appendChild(toast);
+    setTimeout(() => { toast.style.transition = 'opacity .5s'; toast.style.opacity = '0'; setTimeout(() => toast.remove(), 500); }, 3000);
+  }
 
   // Cambiar pestañas de Mis Apuestas
   function cambiarPestana(tipo) {
@@ -1261,7 +1548,12 @@
 
   function usarMaximoGlobal(saldoMaximo) {
     var input = document.getElementById("input-monto-global");
-    var maximo = Math.min(saldoMaximo, 5000);
+    var switchBono = document.getElementById("switch-usar-bono");
+    var finalSaldo = saldoMaximo;
+    if (switchBono && switchBono.checked) {
+      finalSaldo = parseFloat("{{ saldo_bono|unlocalize }}") || 0;
+    }
+    var maximo = Math.min(finalSaldo, 5000);
     input.value = maximo.toFixed(2);
     calcularRetorno();
   }

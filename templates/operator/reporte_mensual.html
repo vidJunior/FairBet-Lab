@@ -8,86 +8,110 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
 </head>
-<body class="bg-gray-900 text-white min-h-screen">
-    <nav class="bg-gray-800 border-b border-gray-700 px-6 py-4">
+<body class="bg-slate-50 text-slate-900 min-h-screen">
+    <nav class="bg-white border-b border-slate-200 px-6 py-4 shadow-sm">
         <div class="flex items-center justify-between">
-            <h1 class="text-2xl font-bold text-green-400">FairBet - Panel del Operador</h1>
-            <div class="flex gap-4">
-                <a href="{% url 'operator:dashboard' %}" class="px-3 py-2 rounded bg-gray-600 hover:bg-gray-700">Dashboard</a>
-                <a href="{% url 'operator:reporte_mensual' %}" class="px-3 py-2 rounded bg-blue-600 hover:bg-blue-700">Reporte Mensual</a>
-                <a href="/admin/" class="px-3 py-2 rounded bg-gray-600 hover:bg-gray-700">Admin</a>
+            <h1 class="text-2xl font-black tracking-tight text-slate-800 flex items-center gap-2">
+                <span class="p-1.5 bg-emerald-50 text-emerald-600 rounded-lg">
+                    <i data-lucide="shield" class="w-6 h-6"></i>
+                </span>
+                <span>FairBet - Panel del Operador</span>
+            </h1>
+            <div class="flex gap-3 items-center">
+                <a href="{% url 'operator:dashboard' %}" class="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-900 text-white font-semibold text-sm transition-colors">Dashboard</a>
+                <a href="{% url 'operator:reporte_mensual' %}" class="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-semibold text-sm transition-colors animate-pulse">Reporte Mensual</a>
+                <a href="/admin/" class="px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold text-sm transition-colors border border-slate-200">Admin</a>
+                <!-- Separador visual -->
+                <div class="w-px h-6 bg-slate-200 mx-1"></div>
+                <!-- Botón Cerrar Sesión -->
+                <a href="{% url 'logout_html' %}"
+                   class="px-4 py-2 rounded-xl bg-red-50 hover:bg-red-600 text-red-600 hover:text-white font-semibold text-sm transition-all border border-red-200 hover:border-red-600 flex items-center gap-1.5 group"
+                   title="Cerrar sesión del panel">
+                    <i data-lucide="log-out" class="w-4 h-4 transition-transform group-hover:-translate-x-0.5"></i>
+                    Cerrar Sesión
+                </a>
             </div>
         </div>
     </nav>
 
-    <main class="p-6 max-w-4xl mx-auto">
-        <h2 class="text-xl font-semibold mb-6">Reporte Mensual Exportable (Estilo MINCETUR)</h2>
+    <main class="p-6 max-w-4xl mx-auto space-y-6">
+        <h2 class="text-2xl font-black text-slate-800 flex items-center gap-2">
+            <i data-lucide="file-text" class="w-7 h-7 text-indigo-600"></i>
+            Reporte Mensual Exportable (Estilo MINCETUR)
+        </h2>
 
-        <div class="bg-gray-800 rounded-lg p-6 border border-gray-700 mb-6">
-            <form method="get" class="flex gap-4 items-end">
+        <div class="bg-white rounded-xl border border-slate-200 p-6 shadow-sm text-slate-800">
+            <form method="get" class="flex flex-wrap gap-4 items-end">
                 <div>
-                    <label class="block text-sm text-gray-400 mb-1">Año</label>
+                    <label class="block text-xs font-bold text-slate-500 mb-1 uppercase tracking-wider">Año</label>
                     <input type="number" name="year" value="{{ year }}" min="2024" max="2030"
-                           class="bg-gray-700 border border-gray-600 rounded px-3 py-2 w-24">
+                           class="bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 w-28 text-sm font-semibold focus:outline-none focus:border-indigo-600 text-slate-800">
                 </div>
                 <div>
-                    <label class="block text-sm text-gray-400 mb-1">Mes</label>
-                    <select name="month" class="bg-gray-700 border border-gray-600 rounded px-3 py-2">
+                    <label class="block text-xs font-bold text-slate-500 mb-1 uppercase tracking-wider">Mes</label>
+                    <select name="month" class="bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-sm font-semibold focus:outline-none focus:border-indigo-600 text-slate-800">
                         {% for num, nombre in meses %}
                             <option value="{{ num }}" {% if num == month %}selected{% endif %}>{{ nombre }}</option>
                         {% endfor %}
                     </select>
                 </div>
-                <button type="submit" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded">
+                <button type="submit" class="px-5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs transition-colors flex items-center gap-1.5 shadow-sm">
+                    <i data-lucide="eye" class="w-4 h-4"></i>
                     Ver Resumen
                 </button>
                 <a href="?year={{ year }}&month={{ month }}&export=true"
-                   class="px-4 py-2 bg-green-600 hover:bg-green-700 rounded flex items-center gap-2">
+                   class="px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs transition-colors flex items-center gap-1.5 shadow-sm">
                     <i data-lucide="download" class="w-4 h-4"></i>
                     Exportar CSV
                 </a>
             </form>
         </div>
 
-        <div class="bg-gray-800 rounded-lg p-6 border border-gray-700">
-            <h3 class="text-lg font-semibold mb-4">Resumen: {{ summary.mes }}</h3>
+        <div class="bg-white rounded-xl border border-slate-200 p-6 shadow-sm text-slate-800">
+            <h3 class="text-base font-bold text-slate-800 mb-4 flex items-center gap-2 border-b border-slate-100 pb-3">
+                <i data-lucide="calendar-days" class="w-5 h-5 text-indigo-600"></i>
+                Resumen: {{ summary.mes }}
+            </h3>
 
             <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
-                <div class="bg-gray-700/50 rounded p-4">
-                    <p class="text-sm text-gray-400">Total Apostado</p>
-                    <p class="text-2xl font-bold text-yellow-400">S/ {{ summary.total_apostado }}</p>
+                <div class="bg-white border border-slate-200 rounded-xl p-5 shadow-2xs space-y-1">
+                    <p class="text-xs font-bold uppercase tracking-wider text-slate-500">Total Apostado</p>
+                    <p class="text-2xl font-black font-mono text-slate-900">f. {{ summary.total_apostado }}</p>
                 </div>
-                <div class="bg-gray-700/50 rounded p-4">
-                    <p class="text-sm text-gray-400">Total Ganadas</p>
-                    <p class="text-2xl font-bold text-green-400">S/ {{ summary.total_ganadas_monto }}</p>
+                <div class="bg-white border border-slate-200 rounded-xl p-5 shadow-2xs space-y-1">
+                    <p class="text-xs font-bold uppercase tracking-wider text-slate-500">Total Ganadas</p>
+                    <p class="text-2xl font-black font-mono text-emerald-600">f. {{ summary.total_ganadas_monto }}</p>
                 </div>
-                <div class="bg-gray-700/50 rounded p-4">
-                    <p class="text-sm text-gray-400">GGR del Mes</p>
-                    <p class="text-2xl font-bold text-blue-400">S/ {{ summary.ggr_mes }}</p>
+                <div class="bg-white border border-slate-200 rounded-xl p-5 shadow-2xs space-y-1">
+                    <p class="text-xs font-bold uppercase tracking-wider text-slate-500">GGR del Mes</p>
+                    <p class="text-2xl font-black font-mono text-indigo-600">f. {{ summary.ggr_mes }}</p>
                 </div>
-                <div class="bg-gray-700/50 rounded p-4">
-                    <p class="text-sm text-gray-400">N° Apuestas</p>
-                    <p class="text-2xl font-bold text-purple-400">{{ summary.num_apuestas }}</p>
+                <div class="bg-white border border-slate-200 rounded-xl p-5 shadow-2xs space-y-1">
+                    <p class="text-xs font-bold uppercase tracking-wider text-slate-500">N° Apuestas</p>
+                    <p class="text-2xl font-black font-mono text-violet-600">{{ summary.num_apuestas }}</p>
                 </div>
             </div>
 
-            <div class="mt-6 p-4 bg-gray-700/30 rounded border border-gray-600">
-                <h4 class="text-sm font-semibold text-gray-300 mb-2">Columnas del CSV Exportado:</h4>
-                <div class="grid grid-cols-2 md:grid-cols-4 gap-2 text-xs text-gray-400">
-                    <span>fecha</span>
-                    <span>tipo_juego</span>
-                    <span>tipo_apuesta</span>
-                    <span>evento_id</span>
-                    <span>evento</span>
-                    <span>mercado</span>
-                    <span>seleccion</span>
-                    <span>monto_apostado</span>
-                    <span>cuota</span>
-                    <span>monto_ganado</span>
-                    <span>ggr</span>
-                    <span>usuario_dni</span>
-                    <span>usuario_nombre</span>
-                    <span>estado_apuesta</span>
+            <div class="mt-6 p-5 bg-slate-50 border border-slate-200 rounded-2xl">
+                <h4 class="text-xs font-black uppercase tracking-widest text-slate-400 mb-3 flex items-center gap-1.5">
+                    <i data-lucide="table" class="w-4 h-4 text-slate-400"></i>
+                    Columnas del CSV Exportado (Normativa MINCETUR)
+                </h4>
+                <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3 text-xs font-semibold text-slate-600">
+                    <span class="bg-white border border-slate-200/60 p-2 rounded-lg text-center shadow-3xs">fecha</span>
+                    <span class="bg-white border border-slate-200/60 p-2 rounded-lg text-center shadow-3xs">tipo_juego</span>
+                    <span class="bg-white border border-slate-200/60 p-2 rounded-lg text-center shadow-3xs">tipo_apuesta</span>
+                    <span class="bg-white border border-slate-200/60 p-2 rounded-lg text-center shadow-3xs">evento_id</span>
+                    <span class="bg-white border border-slate-200/60 p-2 rounded-lg text-center shadow-3xs">evento</span>
+                    <span class="bg-white border border-slate-200/60 p-2 rounded-lg text-center shadow-3xs">mercado</span>
+                    <span class="bg-white border border-slate-200/60 p-2 rounded-lg text-center shadow-3xs">seleccion</span>
+                    <span class="bg-white border border-slate-200/60 p-2 rounded-lg text-center shadow-3xs">monto_apostado</span>
+                    <span class="bg-white border border-slate-200/60 p-2 rounded-lg text-center shadow-3xs">cuota</span>
+                    <span class="bg-white border border-slate-200/60 p-2 rounded-lg text-center shadow-3xs">monto_ganado</span>
+                    <span class="bg-white border border-slate-200/60 p-2 rounded-lg text-center shadow-3xs">ggr</span>
+                    <span class="bg-white border border-slate-200/60 p-2 rounded-lg text-center shadow-3xs">usuario_dni</span>
+                    <span class="bg-white border border-slate-200/60 p-2 rounded-lg text-center shadow-3xs">usuario_nombre</span>
+                    <span class="bg-white border border-slate-200/60 p-2 rounded-lg text-center shadow-3xs">estado_apuesta</span>
                 </div>
             </div>
         </div>

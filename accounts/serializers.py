@@ -74,6 +74,9 @@ class RegistroUsuarioSerializer(serializers.ModelSerializer):
                 dni=dni,
                 estado=EstadoPerfil.VERIFICADO,
             )
+            from panel.services import crear_bono_bienvenida_automatico
+
+            crear_bono_bienvenida_automatico(user)
 
         return user
 

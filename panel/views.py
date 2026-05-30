@@ -8,8 +8,17 @@ from panel.reports import get_monthly_summary
 
 @staff_member_required
 def dashboard_view(request):
+    from django.contrib.auth import get_user_model
+    from panel.models import Bono
+    User = get_user_model()
+    users = User.objects.filter(is_staff=False).order_by("username")
+    bonos = Bono.objects.select_related("usuario").all().order_by("-creado")
     metrics = get_dashboard_metrics()
-    return render(request, "operator/dashboard.html", {"metrics": metrics})
+    return render(request, "operator/dashboard.html", {
+        "metrics": metrics,
+        "users": users,
+        "bonos": bonos,
+    })
 
 
 @staff_member_required

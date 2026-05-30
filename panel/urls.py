@@ -1,6 +1,11 @@
 from django.urls import path
 
 from panel import api_views, views
+from betting.api_views import (
+    OperatorEventosAPIView,
+    OperatorEventoDetailAPIView,
+    OperatorMercadosAPIView,
+)
 
 app_name = "operator"
 
@@ -20,4 +25,9 @@ api_urlpatterns = [
     ),
     path("bonos/", api_views.BonosAPIView.as_view(), name="api_bonos"),
     path("bonos/<uuid:bono_id>/", api_views.BonoDetailView.as_view(), name="api_bono_detail"),
+    
+    # Eventos y Partidos del Operador
+    path("eventos/", OperatorEventosAPIView.as_view(), name="api_eventos"),
+    path("eventos/<int:evento_id>/", OperatorEventoDetailAPIView.as_view(), name="api_evento_detail"),
+    path("eventos/<int:evento_id>/mercados/", OperatorMercadosAPIView.as_view(), name="api_evento_mercados"),
 ]

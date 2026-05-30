@@ -115,11 +115,40 @@ class BonosAPIView(APIView):
         return Response(serializer.data)
 
     def post(self, request):
-        serializer = BonoCreateSerializer(data=request.data)
-        if serializer.is_valid():
-            bono = serializer.save()
-            return Response(BonoSerializer(bono).data, status=status.HTTP_201_CREATED)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        tipo = request.data.get("tipo")
+        monto = request.data.get("monto")
+        rollover_multiplier = request.data.get("rollover_multiplier", 5)
+        expira = request.data.get("expira")
+
+        if not monto or not expira:
+            return Response({"error": "El monto y la fecha de expiración son obligatorios."}, status=status.HTTP_400_BAD_REQUEST)
+
+        # Parsear fecha de expiración
+        from django.utils.dateparse import parse_datetime
+        expira_dt = parse_datetime(expira)
+        if not expira_dt:
+            return Response({"error": "Formato de fecha de expiración inválido."}, status=status.HTTP_400_BAD_REQUEST)
+
+        if tipo == "recarga":
+            from panel.services import crear_bono_recarga_masivo
+            bonos = crear_bono_recarga_masivo(monto, rollover_multiplier, expira_dt)
+            return Response({"message": f"Bono de recarga creado con éxito para {len(bonos)} usuarios."}, status=status.HTTP_201_CREATED)
+
+        elif tipo == "codigo":
+            codigo = request.data.get("codigo")
+            usos_maximos = request.data.get("usos_maximos")
+            if not codigo or not usos_maximos:
+                return Response({"error": "El código del bono y el límite de usos son obligatorios para este tipo de bono."}, status=status.HTTP_400_BAD_REQUEST)
+
+            from panel.services import crear_codigo_bono
+            from django.core.exceptions import ValidationError
+            try:
+                codigo_bono = crear_codigo_bono(codigo, monto, rollover_multiplier, usos_maximos, expira_dt)
+                return Response({"message": f"Código de bono '{codigo_bono.codigo}' creado con éxito."}, status=status.HTTP_201_CREATED)
+            except ValidationError as e:
+                return Response({"error": str(e.message if hasattr(e, "message") else e)}, status=status.HTTP_400_BAD_REQUEST)
+
+        return Response({"error": "Tipo de bono no válido."}, status=status.HTTP_400_BAD_REQUEST)
 
 
 class BonoDetailView(APIView):

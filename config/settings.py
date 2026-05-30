@@ -177,9 +177,9 @@ CELERY_TIMEZONE = TIME_ZONE
 
 # Programación de Tareas Periódicas (Celery Beat)
 CELERY_BEAT_SCHEDULE = {
-    "auto-iniciar-partidos-en-vivo-cada-10s": {
+    "auto-iniciar-partidos-en-vivo-cada-3s": {
         "task": "betting.tasks.actualizar_partidos_a_en_vivo",
-        "schedule": 10.0,  # Verificar cada 10 segundos
+        "schedule": 3.0,  # Verificar cada 3 segundos
     },
     "simular-reloj-partidos-en-vivo-cada-5s": {
         "task": "betting.tasks.simular_minuto_partidos_en_vivo",

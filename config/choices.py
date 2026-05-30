@@ -75,3 +75,29 @@ class TipoApuesta(models.TextChoices):
     COMBINADA = "COMBINADA", "Combinada"
 
 
+class TipoAccionAuditoria(models.TextChoices):
+    BET_CREATED = 'BET_CREATED', 'Apuesta Creada'
+    BET_SETTLED = 'BET_SETTLED', 'Apuesta Liquidada'
+    WALLET_MOVEMENT = 'WALLET_MOVEMENT', 'Movimiento de Wallet'
+    ODDS_CHANGED = 'ODDS_CHANGED', 'Cambio de Cuotas'
+
+
+class ReglaActividadSospechosa(models.TextChoices):
+    MULTIPLE_ACCOUNTS_SAME_IP = 'MULTIPLE_ACCOUNTS_SAME_IP', 'Misma IP con múltiples cuentas'
+    IDENTICAL_GROUP_BETTING = 'IDENTICAL_GROUP_BETTING', 'Patrón de apuestas idénticas en grupo'
+    IMMEDIATE_DEPOSIT_CASHOUT = 'IMMEDIATE_DEPOSIT_CASHOUT', 'Depósito inmediato seguido de Cash-Out'
+
+
+class EstadoActividadSospechosa(models.TextChoices):
+    PENDING = 'PENDING', 'Pendiente de Revisión'
+    REVIEWED = 'REVIEWED', 'Revisado / Confirmado'
+    DISMISSED = 'DISMISSED', 'Descartado / Falso Positivo'
+
+
+class SeveridadActividadSospechosa(models.TextChoices):
+    LOW = 'LOW', 'Baja'
+    MEDIUM = 'MEDIUM', 'Media'
+    HIGH = 'HIGH', 'Alta'
+
+
+

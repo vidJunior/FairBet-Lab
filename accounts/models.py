@@ -62,7 +62,6 @@ class PerfilUsuario(models.Model):
     def save(self, *args, **kwargs):
         self.full_clean()
 
-        # Si el perfil ya existe, verificar si cambió el tipo de autoexclusión
         if self.pk:
             original = PerfilUsuario.objects.only("tipo_autoexclusion").get(pk=self.pk)
             cambio_autoexclusion = (
@@ -111,7 +110,7 @@ class PerfilUsuario(models.Model):
                 self.save()
             return
 
-        # Reducción: el nuevo límite es menor que el actual
+        # Reducción inmediata; incremento espera 24h de cooldown
         if nuevo_valor < current_value:
             setattr(self, current_field, nuevo_valor)
             if self.tipo_limite_pendiente == tipo_limite:
@@ -131,13 +130,10 @@ class PerfilUsuario(models.Model):
             self.save()
 
     def aplicar_limite_pendiente(self):
-        """
-        Aplica el límite de depósito pendiente si ha transcurrido el periodo de cooldown de 24 horas.
-        """
+        """Aplica el límite pendiente tras el cooldown de 24h."""
         if self.fecha_solicitud_incremento:
             cooldown_limite = self.fecha_solicitud_incremento + timedelta(hours=24)
             if timezone.now() >= cooldown_limite:
-                # se hace e cambio del limite
                 setattr(
                     self,
                     f"limite_deposito_{self.tipo_limite_pendiente}",

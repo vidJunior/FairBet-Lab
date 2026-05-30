@@ -68,7 +68,7 @@ def generate_monthly_report(year, month):
             "tipo_juego": "Apuesta Deportiva",
             "tipo_apuesta": apuesta.tipo,
             "evento_id": str(evento.id) if evento else "N/A",
-            "evento": f"{evento.local.nombre} vs {evento.visitante.nombre}" if evento else "N/A",
+            "evento": f"{evento.local} vs {evento.visitante}" if evento else "N/A",
             "mercado": mercado_nombre,
             "seleccion": seleccion_nombre,
             "monto_apostado": str(apuesta.monto.quantize(Decimal("0.0001"))),
@@ -124,13 +124,13 @@ def get_monthly_summary(year, month):
         count=Count("id"),
     )
 
-    total_apostado = resultado["total_apuestas"] or Decimal("0.0000")
-    total_ganadas_monto = resultado["total_ganadas"] or Decimal("0.0000")
+    total_apostado = resultado["total_apuestas"] or Decimal("0.00")
+    total_ganadas_monto = resultado["total_ganadas"] or Decimal("0.00")
 
     return {
         "mes": f"{year}-{month:02d}",
-        "total_apostado": str(total_apostado.quantize(Decimal("0.0001"))),
-        "total_ganadas_monto": str(total_ganadas_monto.quantize(Decimal("0.0001"))),
-        "ggr_mes": str((total_apostado - total_ganadas_monto).quantize(Decimal("0.0001"))),
+        "total_apostado": str(total_apostado.quantize(Decimal("0.01"))),
+        "total_ganadas_monto": str(total_ganadas_monto.quantize(Decimal("0.01"))),
+        "ggr_mes": str((total_apostado - total_ganadas_monto).quantize(Decimal("0.01"))),
         "num_apuestas": resultado["count"] or 0,
     }

@@ -30,6 +30,8 @@ class EventoSerializer(serializers.ModelSerializer):
             "estado",
             "goles_local",
             "goles_visitante",
+            "minuto_actual",
+            "periodo",
             "mercados",
         ]
 
@@ -85,7 +87,9 @@ class ApuestaSerializer(serializers.ModelSerializer):
 
 class ApuestaCreateSerializer(serializers.Serializer):
     seleccion_id = serializers.IntegerField(required=False, allow_null=True)
-    cuota_esperada = serializers.DecimalField(max_digits=18, decimal_places=4, required=False, allow_null=True)
+    cuota_esperada = serializers.DecimalField(
+        max_digits=18, decimal_places=4, required=False, allow_null=True
+    )
 
     seleccion_ids = serializers.ListField(
         child=serializers.IntegerField(), required=False, allow_empty=True
@@ -93,7 +97,7 @@ class ApuestaCreateSerializer(serializers.Serializer):
     cuotas_esperadas = serializers.DictField(
         child=serializers.DecimalField(max_digits=18, decimal_places=4),
         required=False,
-        allow_empty=True
+        allow_empty=True,
     )
 
     monto = serializers.DecimalField(max_digits=18, decimal_places=4)
@@ -116,4 +120,3 @@ class ApuestaCreateSerializer(serializers.Serializer):
                 "No puede enviar 'seleccion_id' y 'seleccion_ids' a la vez."
             )
         return attrs
-

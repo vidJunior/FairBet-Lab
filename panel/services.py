@@ -12,30 +12,60 @@ from betting.models import Apuesta, Evento, Seleccion
 
 def calculate_ggr(period_hours=24):
     """
-    Gross Gaming Revenue = stakes (perdidos por usuarios) - payouts (ganados por usuarios)
-    Calculado sobre LedgerEntry entre la cuenta CASA y APUESTAS_PENDIENTES.
+    Gross Gaming Revenue = stakes (total apostado) − payouts (pagos a ganadores)
+    Calculado sobre apuestas resueltas (WON, LOST, CASHED_OUT) en el período.
+    Según la guía: GGR = stakes − payouts.
     """
     desde = timezone.now() - timedelta(hours=period_hours)
 
-    stakes_perdidos = LedgerEntry.objects.filter(
-        Q(cuenta=TipoCuenta.APUESTAS_PENDIENTES) | Q(cuenta=TipoCuenta.CASA),
-        direccion="DEBIT",
-        creado__gte=desde,
-    ).aggregate(total=Sum("monto"))["total"] or Decimal("0.0000")
+    # Stakes: suma de montos de todas las apuestas resueltas en el período
+    apuestas_resueltas = Apuesta.objects.filter(
+        estado__in=[EstadoApuesta.WON, EstadoApuesta.LOST, EstadoApuesta.CASHED_OUT],
+        actualizado__gte=desde,
+    )
 
-    payouts = LedgerEntry.objects.filter(
-        cuenta=TipoCuenta.WALLET_USUARIO,
-        direccion="CREDIT",
-        creado__gte=desde,
-    ).aggregate(total=Sum("monto"))["total"] or Decimal("0.0000")
+    total_stakes = apuestas_resueltas.aggregate(
+        total=Sum("monto")
+    )["total"] or Decimal("0.0000")
 
-    return (stakes_perdidos - payouts).quantize(Decimal("0.01"))
+    # Payouts: para apuestas ganadas = monto × cuota_fijada
+    from django.db.models import F
+    total_payouts_won = Apuesta.objects.filter(
+        estado=EstadoApuesta.WON,
+        actualizado__gte=desde,
+    ).aggregate(
+        total=Sum(F("monto") * F("cuota_fijada"))
+    )["total"] or Decimal("0.0000")
+
+    # Payouts: para apuestas con cash-out, el payout real se calcula
+    # desde los créditos en la billetera del usuario asociados a esas apuestas
+    total_payouts_cashout = Decimal("0.0000")
+    apuestas_cashout = Apuesta.objects.filter(
+        estado=EstadoApuesta.CASHED_OUT,
+        actualizado__gte=desde,
+    )
+    for apuesta_co in apuestas_cashout:
+        # El cashout se registró como crédito al usuario desde la casa
+        # Aproximamos con la fórmula estándar de cashout
+        sel = apuesta_co.seleccion
+        if sel:
+            cuota_actual = sel.cuota
+            cuota_original = apuesta_co.cuota_fijada
+            if cuota_actual > 0 and cuota_original > 0:
+                cashout_val = apuesta_co.monto * cuota_original / cuota_actual * Decimal("0.95")
+                total_payouts_cashout += cashout_val
+
+    total_payouts = total_payouts_won + total_payouts_cashout
+    ggr = (total_stakes - total_payouts).quantize(Decimal("0.01"))
+    return ggr
 
 
 def calculate_exposure_by_event():
     """
     Exposure por evento: cuánto pierde la casa si gana cada selección.
-    Para cada evento activo, suma los payouts potenciales de todas las apuestas accepted.
+    Para cada evento activo, calcula la pérdida neta potencial de la casa.
+    Exposure = máx(payout_potencial_selección - total_apostado_evento) para el peor caso.
+    No filtra por mercado activo: el riesgo contable existe aunque el mercado esté suspendido.
     """
     eventos_activos = Evento.objects.filter(
         estado__in=[EstadoEvento.PROGRAMADO, EstadoEvento.EN_VIVO]
@@ -44,12 +74,13 @@ def calculate_exposure_by_event():
     exposure_data = []
 
     for evento in eventos_activos:
+        # Todas las selecciones del evento, sin filtrar por mercado activo
         selecciones = Seleccion.objects.filter(
             mercado__evento=evento,
-            mercado__activo=True,
         ).select_related("mercado")
 
-        total_exposure = Decimal("0.0000")
+        # Total apostado en TODO el evento (todas las selecciones, apuestas accepted)
+        total_apostado_evento = Decimal("0.0000")
         detalles_seleccion = []
 
         for sel in selecciones:
@@ -58,35 +89,49 @@ def calculate_exposure_by_event():
                 estado=EstadoApuesta.ACCEPTED,
             ).distinct()
 
-            exposure_sel = Decimal("0.0000")
-            for apuesta in apuestas_a_sel:
-                payout_potencial = apuesta.monto * apuesta.cuota_fijada
-                exposure_sel += payout_potencial
+            apostado_sel = apuestas_a_sel.aggregate(
+                total=Sum("monto")
+            )["total"] or Decimal("0.0000")
+            total_apostado_evento += apostado_sel
 
-            if exposure_sel > 0:
+            payout_potencial = Decimal("0.0000")
+            for apuesta in apuestas_a_sel:
+                payout_potencial += apuesta.monto * apuesta.cuota_fijada
+
+            if apostado_sel > 0:
                 detalles_seleccion.append(
                     {
                         "seleccion_id": sel.id,
                         "seleccion_nombre": sel.nombre,
                         "mercado": sel.mercado.nombre,
                         "cuota_actual": str(sel.cuota),
-                        "total_apostado": str(
-                            apuestas_a_sel.aggregate(total=Sum("monto"))["total"]
-                            or Decimal("0")
-                        ),
-                        "exposure": str(exposure_sel.quantize(Decimal("0.01"))),
+                        "total_apostado": str(apostado_sel.quantize(Decimal("0.01"))),
+                        "payout_potencial": str(payout_potencial.quantize(Decimal("0.01"))),
+                        "exposure": str(payout_potencial.quantize(Decimal("0.01"))),
                     }
                 )
-                total_exposure += exposure_sel
 
         if detalles_seleccion:
+            # La exposure del evento es el peor escenario:
+            # max(payout_potencial de cada selección) - total apostado en el evento
+            # (si gana la selección con mayor payout, la casa pierde el payout pero
+            #  se queda con los stakes de todas las demás apuestas perdidas)
+            max_payout = max(
+                Decimal(d["payout_potencial"]) for d in detalles_seleccion
+            )
+            exposure_neta = (max_payout - total_apostado_evento).quantize(Decimal("0.01"))
+            # Si la exposure es negativa, la casa gana en cualquier escenario
+            exposure_neta = max(exposure_neta, Decimal("0.00"))
+
             exposure_data.append(
                 {
                     "evento_id": evento.id,
                     "evento_nombre": f"{evento.local} vs {evento.visitante}",
                     "estado": evento.estado,
                     "minuto": evento.minuto_actual,
-                    "total_exposure": str(total_exposure.quantize(Decimal("0.01"))),
+                    "total_apostado": str(total_apostado_evento.quantize(Decimal("0.01"))),
+                    "max_payout": str(max_payout.quantize(Decimal("0.01"))),
+                    "total_exposure": str(exposure_neta),
                     "selecciones": detalles_seleccion,
                 }
             )

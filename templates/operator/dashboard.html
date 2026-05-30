@@ -5,158 +5,1170 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Dashboard del Operador - FairBet</title>
+    
+    <!-- CDN principal de Tailwind CSS y Lucide Icons -->
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
+
+    <!-- Estilos de Resiliencia UX (Fallback CSS si no carga el CDN) -->
+    <style id="tailwind-fallback">
+        body {
+            font-family: 'Inter', system-ui, -apple-system, sans-serif;
+            background-color: #0f172a;
+            color: #f8fafc;
+            margin: 0;
+            padding: 0;
+        }
+        .fallback-banner {
+            display: none;
+            background: #7f1d1d;
+            color: #fecaca;
+            padding: 12px;
+            text-align: center;
+            font-size: 14px;
+            font-weight: 600;
+            border-bottom: 1px solid #991b1b;
+        }
+        /* Reglas básicas por si el script del CDN falla */
+        nav { background-color: #1e293b; padding: 16px; border-bottom: 1px solid #334155; }
+        .max-w-7xl { max-width: 1280px; margin: 0 auto; padding: 24px; }
+        .grid-cols-4 { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 20px; }
+        .bg-gray-800 { background-color: #1e293b; border-radius: 8px; border: 1px solid #334155; padding: 20px; }
+        .rounded-lg { border-radius: 8px; }
+        .border { border: 1px solid #334155; }
+        .p-6 { padding: 24px; }
+        .text-green-400 { color: #4ade80; }
+        .text-blue-400 { color: #60a5fa; }
+        .text-yellow-400 { color: #facc15; }
+        .text-purple-400 { color: #c084fc; }
+        .font-bold { font-weight: 700; }
+        .text-3xl { font-size: 28px; }
+        .text-sm { font-size: 14px; }
+        .text-gray-400 { color: #94a3b8; }
+        .flex { display: flex; }
+        .justify-between { justify-content: space-between; }
+        .items-center { align-items: center; }
+        .gap-4 { gap: 16px; }
+        .space-y-6 > * + * { margin-top: 24px; }
+    </style>
+
+    <script>
+        // Detectar si Tailwind ha cargado correctamente
+        window.addEventListener('DOMContentLoaded', () => {
+            if (!window.tailwind) {
+                // Si no se cargó el CDN, mostramos el banner de advertencia y activamos estilos básicos
+                const banner = document.createElement('div');
+                banner.className = 'fallback-banner';
+                banner.style.display = 'block';
+                banner.innerHTML = '⚠️ El diseño completo no ha cargado debido a que no hay conexión activa con el CDN de Tailwind CSS (cdn.tailwindcss.com). Se ha activado el modo de compatibilidad básica sin conexión.';
+                document.body.insertBefore(banner, document.body.firstChild);
+            }
+            
+            // Reemplazo seguro de Lucide si el CDN falla
+            if (typeof lucide === 'undefined') {
+                window.lucide = {
+                    createIcons: () => {
+                        console.warn("Lucide Icons no cargado desde el CDN. Usando texto alternativo para iconos.");
+                    }
+                };
+            }
+        });
+    </script>
 </head>
-<body class="bg-gray-900 text-white min-h-screen">
-    <nav class="bg-gray-800 border-b border-gray-700 px-6 py-4">
+<body class="bg-slate-50 text-slate-900 min-h-screen">
+    <nav class="bg-white border-b border-slate-200 px-6 py-4 shadow-sm">
         <div class="flex items-center justify-between">
-            <h1 class="text-2xl font-bold text-green-400">FairBet - Panel del Operador</h1>
-            <div class="flex gap-4">
-                <a href="{% url 'operator:dashboard' %}" class="px-3 py-2 rounded bg-green-600 hover:bg-green-700">Dashboard</a>
-                <a href="{% url 'operator:reporte_mensual' %}" class="px-3 py-2 rounded bg-blue-600 hover:bg-blue-700">Reporte Mensual</a>
-                <a href="/admin/operator/alertaabuso/" class="px-3 py-2 rounded bg-red-600 hover:bg-red-700">Alertas</a>
-                <a href="/admin/" class="px-3 py-2 rounded bg-gray-600 hover:bg-gray-700">Admin</a>
+            <h1 class="text-2xl font-black tracking-tight text-slate-800 flex items-center gap-2">
+                <span class="p-1.5 bg-emerald-50 text-emerald-600 rounded-lg">
+                    <i data-lucide="shield" class="w-6 h-6"></i>
+                </span>
+                <span>FairBet - Panel del Operador</span>
+            </h1>
+            <div class="flex gap-3 items-center">
+                
+                <a href="{% url 'operator:reporte_mensual' %}" class="px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold text-sm transition-colors border border-slate-200">Reporte Mensual</a>
+                <button onclick="openAlertasModal()" class="px-4 py-2 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-700 font-semibold text-sm transition-colors border border-rose-200">Alertas</button>
+                <a href="/admin/" class="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-900 text-white font-semibold text-sm transition-colors">Admin</a>
+                <!-- Separador visual -->
+                <div class="w-px h-6 bg-slate-200 mx-1"></div>
+                <!-- Botón Cerrar Sesión -->
+                <a href="{% url 'logout_html' %}"
+                   class="px-4 py-2 rounded-xl bg-red-50 hover:bg-red-600 text-red-600 hover:text-white font-semibold text-sm transition-all border border-red-200 hover:border-red-600 flex items-center gap-1.5 group"
+                   title="Cerrar sesión del panel">
+                    <i data-lucide="log-out" class="w-4 h-4 transition-transform group-hover:-translate-x-0.5"></i>
+                    Cerrar Sesión
+                </a>
             </div>
         </div>
     </nav>
 
     <main class="p-6 max-w-7xl mx-auto">
-        <div class="flex items-center justify-between mb-6">
-            <h2 class="text-xl font-semibold">Métricas en Vivo</h2>
-            <span class="text-sm text-gray-400" id="last-update">Actualizado: --</span>
+        
+        <!-- Pestañas de Navegación del Panel -->
+        <div class="flex bg-slate-200/60 p-1.5 rounded-2xl gap-2 border border-slate-200/80 mb-6 relative shadow-sm max-w-md">
+            <button onclick="switchTab('metrics')" id="btn-tab-metrics" class="flex-1 py-2.5 text-xs font-black uppercase tracking-wider rounded-xl transition-all outline-none text-center bg-white text-indigo-600 shadow-sm border border-slate-200/40 flex items-center justify-center gap-2">
+                <i data-lucide="bar-chart-3" class="w-4 h-4"></i>
+                Métricas & Bonos
+            </button>
+            <button onclick="switchTab('live-control')" id="btn-tab-live-control" class="flex-1 py-2.5 text-xs font-bold uppercase tracking-wider rounded-xl transition-all outline-none text-center text-slate-500 hover:text-slate-700 hover:bg-slate-200/50 flex items-center justify-center gap-2">
+                <i data-lucide="gamepad-2" class="w-4 h-4"></i>
+                Control en Vivo
+            </button>
         </div>
 
-        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-            <div class="bg-gray-800 rounded-lg p-6 border border-gray-700">
-                <div class="flex items-center justify-between mb-2">
-                    <span class="text-gray-400 text-sm">GGR (24h)</span>
-                    <i data-lucide="trending-up" class="w-5 h-5 text-green-400"></i>
-                </div>
-                <p class="text-3xl font-bold text-green-400" id="ggr-24h">S/ {{ metrics.ggr_24h }}</p>
+        <!-- CONTENEDOR 1: MÉTRICAS Y BONOS -->
+        <div id="tab-metrics-content" class="space-y-6">
+            <div class="flex items-center justify-between mb-6">
+                <h2 class="text-xl font-semibold">Métricas en Vivo</h2>
+                <span class="text-sm text-gray-400" id="last-update">Actualizado: --</span>
             </div>
 
-            <div class="bg-gray-800 rounded-lg p-6 border border-gray-700">
-                <div class="flex items-center justify-between mb-2">
-                    <span class="text-gray-400 text-sm">GGR (7d)</span>
-                    <i data-lucide="bar-chart-3" class="w-5 h-5 text-blue-400"></i>
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+                <div class="bg-white rounded-xl p-6 border border-slate-200 shadow-sm">
+                    <div class="flex items-center justify-between mb-2">
+                        <span class="text-slate-500 text-sm font-semibold">GGR (24h)</span>
+                        <i data-lucide="trending-up" class="w-5 h-5 text-emerald-600"></i>
+                    </div>
+                    <p class="text-3xl font-black text-emerald-600" id="ggr-24h">f. {{ metrics.ggr_24h }}</p>
                 </div>
-                <p class="text-3xl font-bold text-blue-400" id="ggr-7d">S/ {{ metrics.ggr_7d }}</p>
+
+                <div class="bg-white rounded-xl p-6 border border-slate-200 shadow-sm">
+                    <div class="flex items-center justify-between mb-2">
+                        <span class="text-slate-500 text-sm font-semibold">GGR (7d)</span>
+                        <i data-lucide="bar-chart-3" class="w-5 h-5 text-indigo-600"></i>
+                    </div>
+                    <p class="text-3xl font-black text-indigo-600" id="ggr-7d">f. {{ metrics.ggr_7d }}</p>
+                </div>
+
+                <div class="bg-white rounded-xl p-6 border border-slate-200 shadow-sm">
+                    <div class="flex items-center justify-between mb-2">
+                        <span class="text-slate-500 text-sm font-semibold">Volumen (24h)</span>
+                        <i data-lucide="coins" class="w-5 h-5 text-amber-600"></i>
+                    </div>
+                    <p class="text-3xl font-black text-amber-600" id="volume-24h">f. {{ metrics.volume_24h.total_staked }}</p>
+                    <p class="text-sm text-slate-400 mt-1 font-medium" id="total-bets">{{ metrics.volume_24h.total_apuestas }} apuestas</p>
+                </div>
+
+                <div class="bg-white rounded-xl p-6 border border-slate-200 shadow-sm">
+                    <div class="flex items-center justify-between mb-2">
+                        <span class="text-slate-500 text-sm font-semibold">Usuarios Activos</span>
+                        <i data-lucide="users" class="w-5 h-5 text-violet-600"></i>
+                    </div>
+                    <p class="text-3xl font-black text-violet-600" id="active-1h">{{ metrics.active_users_1h }}</p>
+                    <p class="text-sm text-slate-400 mt-1 font-medium">última hora ({{ metrics.active_users_24h }} en 24h)</p>
+                </div>
             </div>
 
-            <div class="bg-gray-800 rounded-lg p-6 border border-gray-700">
-                <div class="flex items-center justify-between mb-2">
-                    <span class="text-gray-400 text-sm">Volumen (24h)</span>
-                    <i data-lucide="coins" class="w-5 h-5 text-yellow-400"></i>
+            <div class="bg-white rounded-xl p-6 border border-slate-200 shadow-sm mb-8">
+                <h3 class="text-lg font-bold text-slate-800 mb-4">Exposure por Evento</h3>
+                <p class="text-sm text-slate-500 mb-4">Total expuesto: <span class="text-rose-600 font-extrabold" id="total-exposure">f. {{ metrics.total_exposure }}</span></p>
+
+                <div class="overflow-x-auto">
+                    <table class="w-full text-sm">
+                        <thead class="border-b border-slate-200 bg-slate-50/50">
+                            <tr>
+                                <th class="text-left py-3 px-4 text-slate-500 font-bold">Evento</th>
+                                <th class="text-left py-3 px-4 text-slate-500 font-bold">Estado</th>
+                                <th class="text-right py-3 px-4 text-slate-500 font-bold">Exposure</th>
+                                <th class="text-left py-3 px-4 text-slate-500 font-bold">Selecciones</th>
+                            </tr>
+                        </thead>
+                        <tbody id="exposure-table">
+                            {% for evento in metrics.exposure_by_event %}
+                            <tr class="border-b border-slate-100 hover:bg-slate-50/50 transition-colors">
+                                <td class="py-3 px-4 font-semibold text-slate-700">{{ evento.evento_nombre }}</td>
+                                <td class="py-3 px-4">
+                                    {% if evento.estado == 'en_vivo' %}
+                                        <span class="px-2 py-1 rounded-lg text-xs bg-rose-50 border border-rose-100 text-rose-600 font-bold">EN VIVO - Min {{ evento.minuto }}</span>
+                                    {% else %}
+                                        <span class="px-2 py-1 rounded-lg text-xs bg-indigo-50 border border-indigo-100 text-indigo-600 font-bold">PROGRAMADO</span>
+                                    {% endif %}
+                                </td>
+                                <td class="py-3 px-4 text-right font-mono font-bold text-rose-600">f. {{ evento.total_exposure }}</td>
+                                <td class="py-3 px-3 text-xs text-gray-400">
+                                    {% for sel in evento.selecciones|slice:":3" %}
+                                        <span class="inline-block mr-2">{{ sel.seleccion_nombre }}: f. {{ sel.exposure }}</span>
+                                    {% endfor %}
+                                    {% if evento.selecciones|length > 3 %}
+                                        <span class="text-gray-500">+{{ evento.selecciones|length|add:"-3" }} más</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% empty %}
+                            <tr>
+                                <td colspan="4" class="py-4 text-center text-gray-500">No hay eventos con exposure activo</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
                 </div>
-                <p class="text-3xl font-bold text-yellow-400" id="volume-24h">S/ {{ metrics.volume_24h.total_staked }}</p>
-                <p class="text-sm text-gray-500 mt-1" id="total-bets">{{ metrics.volume_24h.total_apuestas }} apuestas</p>
             </div>
 
-            <div class="bg-gray-800 rounded-lg p-6 border border-gray-700">
-                <div class="flex items-center justify-between mb-2">
-                    <span class="text-gray-400 text-sm">Usuarios Activos</span>
-                    <i data-lucide="users" class="w-5 h-5 text-purple-400"></i>
+            <!-- LISTADO DE BONOS PROMOCIONALES -->
+            <div class="bg-white rounded-xl p-6 border border-slate-200 shadow-sm mb-8">
+                <div class="flex items-center gap-2 mb-4">
+                    <i data-lucide="gift" class="w-5 h-5 text-indigo-600"></i>
+                    <h3 class="text-lg font-bold text-slate-800">Monitoreo de Bonos Promocionales</h3>
                 </div>
-                <p class="text-3xl font-bold text-purple-400" id="active-1h">{{ metrics.active_users_1h }}</p>
-                <p class="text-sm text-gray-500 mt-1">última hora ({{ metrics.active_users_24h }} en 24h)</p>
+
+                <div class="overflow-x-auto">
+                    <table class="w-full text-sm text-left">
+                        <thead class="border-b border-slate-200 text-slate-500 bg-slate-50/50">
+                            <tr>
+                                <th class="py-3 px-4 font-bold">Usuario</th>
+                                <th class="py-3 px-4 font-bold">Tipo de Bono</th>
+                                <th class="py-3 px-4 text-right font-bold">Monto</th>
+                                <th class="py-3 px-4 font-bold">Progreso de Rollover</th>
+                                <th class="py-3 px-4 font-bold">Estado</th>
+                                <th class="py-3 px-4 font-bold">Vencimiento</th>
+                            </tr>
+                        </thead>
+                        <tbody id="bonos-list">
+                            {% for b in bonos %}
+                            <tr class="border-b border-slate-100 hover:bg-slate-50/50 transition-colors">
+                                <td class="py-3 px-4 font-semibold text-slate-700">{{ b.usuario.username }}</td>
+                                <td class="py-3 px-4">
+                                    <span class="text-xs uppercase tracking-wider font-bold text-slate-400">
+                                        {% if b.tipo == 'bienvenida' %}Bienvenida
+                                        {% elif b.tipo == 'recarga' %}Recarga
+                                        {% else %}Manual{% endif %}
+                                    </span>
+                                </td>
+                                <td class="py-3 px-4 text-right font-mono font-bold text-indigo-600">f. {{ b.monto|stringformat:".2f" }}</td>
+                                <td class="py-3 px-4">
+                                    <div class="w-36">
+                                        <div class="flex justify-between text-[10px] text-slate-400 font-bold mb-1">
+                                            <span>{{ b.rollover_apostado|stringformat:".2f" }} / {{ b.rollover_requerido|stringformat:".2f" }}</span>
+                                            <span>{{ b.rollover_progreso }}%</span>
+                                        </div>
+                                        <div class="w-full bg-slate-100 rounded-full h-1.5 overflow-hidden">
+                                            <div class="bg-indigo-600 h-full" style="width: {{ b.rollover_progreso }}%"></div>
+                                        </div>
+                                    </div>
+                                </td>
+                                <td class="py-3 px-4 text-xs">
+                                    {% if b.estado == 'activo' %}
+                                        <span class="px-2.5 py-1 rounded-lg bg-emerald-50 text-emerald-700 border border-emerald-100 font-bold uppercase text-[10px]">Activo</span>
+                                    {% elif b.estado == 'completado' %}
+                                        <span class="px-2.5 py-1 rounded-lg bg-indigo-50 text-indigo-700 border border-indigo-100 font-bold uppercase text-[10px]">Completado</span>
+                                    {% elif b.estado == 'expirado' %}
+                                        <span class="px-2.5 py-1 rounded-lg bg-slate-50 text-slate-500 border border-slate-200 font-bold uppercase text-[10px]">Expirado</span>
+                                    {% else %}
+                                        <span class="px-2.5 py-1 rounded-lg bg-rose-50 text-rose-700 border border-rose-100 font-bold uppercase text-[10px]">Revocado</span>
+                                    {% endif %}
+                                </td>
+                                <td class="py-3 px-3 text-xs text-gray-400">
+                                    {% if b.expira %}
+                                        {{ b.expira|date:"d/m/Y H:i" }}
+                                    {% else %}
+                                        Sin expiración
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% empty %}
+                            <tr>
+                                <td colspan="6" class="py-4 text-center text-gray-500">No se han emitido bonos promocionales en el sistema</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div class="bg-white rounded-xl p-6 border border-slate-200 shadow-sm">
+                    <h3 class="text-lg font-bold text-slate-800 mb-4">Resumen Apuestas (24h)</h3>
+                    <div class="space-y-3">
+                        <div class="flex justify-between font-medium">
+                            <span class="text-slate-500">Ganadas</span>
+                            <span class="text-emerald-600 font-mono font-bold" id="won-bets">{{ metrics.volume_24h.apuestas_ganadas }}</span>
+                        </div>
+                        <div class="flex justify-between font-medium">
+                            <span class="text-slate-500">Perdidas</span>
+                            <span class="text-rose-600 font-mono font-bold" id="lost-bets">{{ metrics.volume_24h.apuestas_perdidas }}</span>
+                        </div>
+                        <div class="flex justify-between font-medium">
+                            <span class="text-slate-500">Pendientes</span>
+                            <span class="text-amber-600 font-mono font-bold" id="pending-bets">{{ metrics.volume_24h.apuestas_pendientes }}</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="bg-white rounded-xl p-6 border border-slate-200 shadow-sm">
+                    <h3 class="text-lg font-bold text-slate-800 mb-4">Acciones Rápidas</h3>
+                    <div class="space-y-3">
+                        <button onclick="switchTab('live-control')" class="block w-full text-center px-4 py-2 bg-indigo-600 hover:bg-indigo-700 rounded-xl font-bold text-white shadow-sm transition-colors text-sm">
+                            Gestionar Partidos en Vivo
+                        </button>
+                        <a href="{% url 'operator:reporte_mensual' %}" class="block w-full text-center px-4 py-2 bg-slate-100 hover:bg-slate-200 rounded-xl font-bold text-slate-700 transition-colors border border-slate-200 text-sm">
+                            Exportar Reporte Mensual CSV
+                        </a>
+                        <button onclick="openBonoModal()" class="block w-full text-center px-4 py-2 bg-emerald-600 hover:bg-emerald-700 rounded-xl font-bold text-white shadow-sm transition-colors text-sm">
+                            Crear Bono Promocional
+                        </button>
+                        <button onclick="openAlertasModal()" class="block w-full text-center px-4 py-2 bg-rose-50 hover:bg-rose-100 rounded-xl font-bold text-rose-700 transition-colors border border-rose-200 text-sm">
+                            Ver Alertas de Abuso Pendientes
+                        </button>
+                    </div>
+                </div>
             </div>
         </div>
 
-        <div class="bg-gray-800 rounded-lg p-6 border border-gray-700 mb-8">
-            <h3 class="text-lg font-semibold mb-4">Exposure por Evento</h3>
-            <p class="text-sm text-gray-400 mb-4">Total expuesto: <span class="text-red-400 font-bold" id="total-exposure">S/ {{ metrics.total_exposure }}</span></p>
+        <!-- CONTENEDOR 2: GESTIÓN DE PARTIDOS EN VIVO -->
+        <div id="tab-live-control-content" class="hidden space-y-6">
+            <div class="flex items-center justify-between bg-white rounded-xl p-6 border border-slate-200 shadow-sm">
+                <div class="flex items-center gap-3">
+                    <div class="p-3 bg-emerald-50 border border-emerald-100 text-emerald-600 rounded-xl">
+                        <i data-lucide="gamepad-2" class="w-6 h-6 animate-pulse"></i>
+                    </div>
+                    <div>
+                        <h3 class="text-lg font-bold text-slate-800">Consola de Partidos en Vivo</h3>
+                        <p class="text-xs text-slate-500 mt-1 font-semibold">Crea nuevos partidos y controla los marcadores y cuotas en tiempo real.</p>
+                    </div>
+                   </div>
+            <button onclick="openCreateEventoModal()" class="px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold flex items-center gap-2 transition-colors text-sm shadow-sm">
+                <i data-lucide="plus-circle" class="w-4.5 h-4.5"></i>
+                Crear Nuevo Partido
+            </button>
+        </div>
 
+        <!-- Listado de Partidos -->
+        <div class="bg-white rounded-xl border border-slate-200 p-6 shadow-sm">
+            <h4 class="text-base font-bold text-slate-800 mb-4 flex items-center gap-2 border-b border-slate-100 pb-3">
+                <i data-lucide="list" class="w-5 h-5 text-indigo-600"></i>
+                Listado de Eventos Deportivos
+            </h4>
+            
             <div class="overflow-x-auto">
-                <table class="w-full text-sm">
-                    <thead class="border-b border-gray-700">
+                <table class="w-full text-sm text-left">
+                    <thead class="border-b border-slate-200 text-slate-500 bg-slate-50/50">
                         <tr>
-                            <th class="text-left py-2 px-3 text-gray-400">Evento</th>
-                            <th class="text-left py-2 px-3 text-gray-400">Estado</th>
-                            <th class="text-right py-2 px-3 text-gray-400">Exposure</th>
-                            <th class="text-left py-2 px-3 text-gray-400">Selecciones</th>
+                            <th class="py-3 px-4 font-bold">Local</th>
+                            <th class="py-3 px-4 text-center font-bold">vs</th>
+                            <th class="py-3 px-4 font-bold">Visitante</th>
+                            <th class="py-3 px-4 font-bold">Marcador / Minuto</th>
+                            <th class="py-3 px-4 font-bold">Estado</th>
+                            <th class="py-3 px-4 font-bold">Fecha de Inicio</th>
+                            <th class="py-3 px-4 text-right font-bold">Acciones</th>
                         </tr>
                     </thead>
-                    <tbody id="exposure-table">
-                        {% for evento in metrics.exposure_by_event %}
-                        <tr class="border-b border-gray-700/50 hover:bg-gray-700/30">
-                            <td class="py-3 px-3 font-medium">{{ evento.evento_nombre }}</td>
-                            <td class="py-3 px-3">
-                                {% if evento.estado == 'en_vivo' %}
-                                    <span class="px-2 py-1 rounded text-xs bg-red-600/20 text-red-400">EN VIVO - Min {{ evento.minuto }}</span>
-                                {% else %}
-                                    <span class="px-2 py-1 rounded text-xs bg-blue-600/20 text-blue-400">PROGRAMADO</span>
-                                {% endif %}
-                            </td>
-                            <td class="py-3 px-3 text-right font-mono text-red-400">S/ {{ evento.total_exposure }}</td>
-                            <td class="py-3 px-3 text-xs text-gray-400">
-                                {% for sel in evento.selecciones|slice:":3" %}
-                                    <span class="inline-block mr-2">{{ sel.seleccion_nombre }}: S/ {{ sel.exposure }}</span>
-                                {% endfor %}
-                                {% if evento.selecciones|length > 3 %}
-                                    <span class="text-gray-500">+{{ evento.selecciones|length|add:"-3" }} más</span>
-                                {% endif %}
-                            </td>
-                        </tr>
-                        {% empty %}
-                        <tr>
-                            <td colspan="4" class="py-4 text-center text-gray-500">No hay eventos con exposure activo</td>
-                        </tr>
-                        {% endfor %}
+                    <tbody id="live-eventos-list">
+                        <!-- AJAX live events -->
                     </tbody>
                 </table>
             </div>
         </div>
+    </div>
 
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div class="bg-gray-800 rounded-lg p-6 border border-gray-700">
-                <h3 class="text-lg font-semibold mb-4">Resumen Apuestas (24h)</h3>
-                <div class="space-y-3">
-                    <div class="flex justify-between">
-                        <span class="text-gray-400">Ganadas</span>
-                        <span class="text-green-400 font-mono" id="won-bets">{{ metrics.volume_24h.apuestas_ganadas }}</span>
+    </main>
+
+    <!-- MODAL CREAR BONO -->
+    <div id="bonoModal" class="fixed inset-0 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center hidden z-50 transition-opacity duration-300">
+        <div class="bg-white border border-slate-200 w-full max-w-md rounded-2xl p-6 shadow-2xl relative transform transition-all duration-300 scale-95 text-slate-800">
+            <button onclick="closeBonoModal()" class="absolute top-4 right-4 text-slate-400 hover:text-slate-600 transition-colors">
+                <i data-lucide="x" class="w-6 h-6"></i>
+            </button>
+            <h3 class="text-xl font-black text-indigo-600 mb-4 flex items-center gap-2">
+                <i data-lucide="gift" class="w-6 h-6"></i>
+                Crear Bono Promocional
+            </h3>
+            
+            <form id="bonoForm" onsubmit="submitBonoForm(event)" class="space-y-4">
+                {% csrf_token %}
+                <input type="hidden" id="bono_tipo" name="tipo" value="codigo">
+
+                <div>
+                    <label class="block text-xs font-bold text-slate-500 mb-1 uppercase tracking-wider">Código de Bono</label>
+                    <input type="text" id="bono_codigo" name="codigo" required placeholder="Ej. GANADOR2026" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-slate-800 placeholder-slate-400 focus:outline-none focus:border-indigo-600 uppercase font-black tracking-widest text-sm">
+                </div>
+
+                <div>
+                    <label class="block text-xs font-bold text-slate-500 mb-1 uppercase tracking-wider">Monto del Bono (Fichas)</label>
+                    <input type="number" step="0.01" min="0.01" id="bono_monto" name="monto" required placeholder="Ej. 100.00" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-slate-800 placeholder-slate-400 focus:outline-none focus:border-indigo-600 text-sm font-semibold">
+                </div>
+
+                <div>
+                    <label class="block text-xs font-bold text-slate-500 mb-1 uppercase tracking-wider">Multiplicador de Rollover (x)</label>
+                    <input type="number" step="1" min="1" id="bono_rollover" name="rollover_multiplier" value="5" required class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-slate-800 focus:outline-none focus:border-indigo-600 text-sm font-semibold">
+                </div>
+
+                <div>
+                    <label class="block text-xs font-bold text-slate-500 mb-1 uppercase tracking-wider">Máximo de Personas (Límite de Usos)</label>
+                    <input type="number" step="1" min="1" id="bono_usos_maximos" name="usos_maximos" required placeholder="Ej. 50" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-slate-800 placeholder-slate-400 focus:outline-none focus:border-indigo-600 text-sm font-semibold">
+                </div>
+
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-xs font-bold text-slate-500 mb-1 uppercase tracking-wider">Fecha de Expiración</label>
+                        <input type="date" id="bono_fecha" required class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-slate-800 focus:outline-none focus:border-indigo-600 text-sm font-semibold">
                     </div>
-                    <div class="flex justify-between">
-                        <span class="text-gray-400">Perdidas</span>
-                        <span class="text-red-400 font-mono" id="lost-bets">{{ metrics.volume_24h.apuestas_perdidas }}</span>
+                    <div>
+                        <label class="block text-xs font-bold text-slate-500 mb-1 uppercase tracking-wider">Hora de Expiración</label>
+                        <input type="time" id="bono_hora" required class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-slate-800 focus:outline-none focus:border-indigo-600 text-sm font-semibold">
                     </div>
-                    <div class="flex justify-between">
-                        <span class="text-gray-400">Pendientes</span>
-                        <span class="text-yellow-400 font-mono" id="pending-bets">{{ metrics.volume_24h.apuestas_pendientes }}</span>
+                </div>
+
+                <div id="bonoMsg" class="hidden text-sm p-3 rounded-xl"></div>
+
+                <div class="flex gap-3 justify-end pt-2">
+                    <button type="button" onclick="closeBonoModal()" class="px-4 py-2 rounded-lg bg-gray-700 hover:bg-gray-600 text-white font-medium transition-colors">
+                        Cancelar
+                    </button>
+                    <button type="submit" class="px-4 py-2 rounded-lg bg-green-600 hover:bg-green-700 text-white font-medium transition-colors">
+                        Crear Bono
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- MODAL CREAR PARTIDO (OPERADOR) -->
+    <div id="createEventoModal" class="fixed inset-0 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center hidden z-50 transition-opacity duration-300">
+        <div class="bg-white border border-slate-200 w-full max-w-md rounded-2xl p-6 shadow-2xl relative transform transition-all duration-300 scale-95 text-slate-800">
+            <button onclick="closeCreateEventoModal()" class="absolute top-4 right-4 text-slate-400 hover:text-slate-600 transition-colors">
+                <i data-lucide="x" class="w-6 h-6"></i>
+            </button>
+            <h3 class="text-xl font-black text-emerald-600 mb-4 flex items-center gap-2">
+                <i data-lucide="plus-circle" class="w-6 h-6"></i>
+                Crear Nuevo Partido
+            </h3>
+            
+            <form id="createEventoForm" onsubmit="submitCreateEventoForm(event)" class="space-y-4">
+                {% csrf_token %}
+                <div>
+                    <label class="block text-xs font-bold text-slate-500 mb-1 uppercase tracking-wider">Equipo Local</label>
+                    <input type="text" id="evt_local" required placeholder="Ej. Alianza Lima" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-slate-800 placeholder-slate-400 focus:outline-none focus:border-emerald-600 font-semibold text-sm">
+                </div>
+
+                <div>
+                    <label class="block text-xs font-bold text-slate-500 mb-1 uppercase tracking-wider">Equipo Visitante</label>
+                    <input type="text" id="evt_visitante" required placeholder="Ej. Universitario" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-slate-800 placeholder-slate-400 focus:outline-none focus:border-emerald-600 font-semibold text-sm">
+                </div>
+
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-xs font-bold text-slate-500 mb-1 uppercase tracking-wider">Fecha de Inicio</label>
+                        <input type="date" id="evt_fecha" required class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-slate-800 focus:outline-none focus:border-emerald-600 font-semibold text-sm">
                     </div>
+                    <div>
+                        <label class="block text-xs font-bold text-slate-500 mb-1 uppercase tracking-wider">Hora de Inicio</label>
+                        <input type="time" id="evt_hora" required class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-slate-800 focus:outline-none focus:border-emerald-600 font-semibold text-sm">
+                    </div>
+                </div>
+
+                <div id="createEvtMsg" class="hidden text-sm p-3 rounded-xl"></div>
+
+                <div class="flex gap-3 justify-end pt-2">
+                    <button type="button" onclick="closeCreateEventoModal()" class="px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold transition-colors text-sm border border-slate-200">
+                        Cancelar
+                    </button>
+                    <button type="submit" class="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold transition-colors text-sm shadow-sm">
+                        Crear Partido
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- MODAL GESTIÓN Y CONTROL EN VIVO DE PARTIDO -->
+    <div id="eventoControlModal" class="fixed inset-0 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center hidden z-50 transition-opacity duration-300">
+        <div class="bg-white border border-slate-200 w-full max-w-4xl rounded-2xl p-6 shadow-2xl relative transform transition-all duration-300 scale-95 flex flex-col max-h-[95vh] text-slate-800">
+            <button onclick="closeEventoControlModal()" class="absolute top-4 right-4 text-slate-400 hover:text-slate-600 transition-colors">
+                <i data-lucide="x" class="w-6 h-6"></i>
+            </button>
+            <h3 class="text-xl font-black text-indigo-600 mb-4 flex items-center gap-2 border-b border-slate-100 pb-3">
+                <i data-lucide="activity" class="w-6 h-6 animate-pulse"></i>
+                Consola en Vivo: <span id="ctrl_partido_titulo" class="text-slate-800 font-bold">Local vs Visitante</span>
+            </h3>
+
+            <div class="overflow-y-auto flex-1 pr-1 space-y-5">
+                <form id="eventoControlForm" onsubmit="submitEventoControlForm(event)" class="space-y-4">
+                    {% csrf_token %}
+                    <input type="hidden" id="ctrl_evento_id">
+
+                    <!-- Marcador Interactivo Premium Tema Claro -->
+                    <div class="bg-slate-50 border border-slate-200 rounded-2xl p-5 flex items-center justify-between gap-4">
+                        <div class="text-center flex-1">
+                            <span id="ctrl_local_label" class="block font-black text-xs text-slate-500 uppercase tracking-wider truncate max-w-[120px] mx-auto">Local</span>
+                            <div class="flex items-center justify-center gap-2 mt-2">
+                                <button type="button" onclick="modifyGol('local', -1)" class="w-8 h-8 rounded-lg bg-slate-200 hover:bg-slate-300 text-slate-700 font-bold flex items-center justify-center border border-slate-300 transition-colors shadow-sm">-</button>
+                                <span id="ctrl_goles_local" class="text-3xl font-black text-slate-850 px-2 font-mono">0</span>
+                                <button type="button" onclick="modifyGol('local', 1)" class="w-8 h-8 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-bold flex items-center justify-center shadow transition-colors">+</button>
+                            </div>
+                        </div>
+
+                        <div class="text-center font-black text-slate-400 text-sm tracking-widest">VS</div>
+
+                        <div class="text-center flex-1">
+                            <span id="ctrl_visitante_label" class="block font-black text-xs text-slate-500 uppercase tracking-wider truncate max-w-[120px] mx-auto">Visitante</span>
+                            <div class="flex items-center justify-center gap-2 mt-2">
+                                <button type="button" onclick="modifyGol('visitante', -1)" class="w-8 h-8 rounded-lg bg-slate-200 hover:bg-slate-300 text-slate-700 font-bold flex items-center justify-center border border-slate-300 transition-colors shadow-sm">-</button>
+                                <span id="ctrl_goles_visitante" class="text-3xl font-black text-slate-850 px-2 font-mono">0</span>
+                                <button type="button" onclick="modifyGol('visitante', 1)" class="w-8 h-8 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-bold flex items-center justify-center shadow transition-colors">+</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Minuto, Periodo y Estado -->
+                    <div class="grid grid-cols-3 gap-3">
+                        <div>
+                            <label class="block text-[10px] font-bold text-slate-500 mb-1 uppercase tracking-wider">Estado Partido</label>
+                            <select id="ctrl_estado" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-2.5 py-2 text-xs text-slate-800 font-semibold focus:outline-none focus:border-indigo-600">
+                                <option value="programado">Programado</option>
+                                <option value="en_vivo">En Vivo</option>
+                                <option value="suspendido">Suspendido</option>
+                                <option value="finalizado">Finalizado</option>
+                                <option value="anulado">Anulado</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-[10px] font-bold text-slate-500 mb-1 uppercase tracking-wider">Minuto</label>
+                            <input type="number" id="ctrl_minuto" min="0" value="0" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-2.5 py-1.5 text-xs text-slate-800 font-semibold focus:outline-none focus:border-indigo-600">
+                        </div>
+                        <div>
+                            <label class="block text-[10px] font-bold text-slate-500 mb-1 uppercase tracking-wider">Período</label>
+                            <select id="ctrl_periodo" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-2.5 py-2 text-xs text-slate-800 font-semibold focus:outline-none focus:border-indigo-600">
+                                <option value="1T">1T</option>
+                                <option value="2T">2T</option>
+                                <option value="TE">TE</option>
+                                <option value="PEN">PEN</option>
+                                <option value="FIN">FIN</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- Fecha y Hora de Inicio del Evento -->
+                    <div class="grid grid-cols-1 gap-3">
+                        <div>
+                            <label class="block text-[10px] font-bold text-slate-500 mb-1 uppercase tracking-wider">Fecha y Hora de Inicio</label>
+                            <input type="datetime-local" id="ctrl_fecha_inicio" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-2.5 py-1.5 text-xs text-slate-800 font-semibold focus:outline-none focus:border-indigo-600">
+                        </div>
+                    </div>
+
+                    <div id="ctrlEvtMsg" class="hidden text-sm p-3 rounded-xl"></div>
+                </form>
+
+                <!-- Mercados Activos -->
+                <div class="border-t border-slate-200 pt-4 space-y-2">
+                    <h4 class="text-xs font-black uppercase tracking-widest text-slate-400 flex items-center gap-1.5">
+                        <i data-lucide="layout-grid" class="w-4 h-4 text-emerald-600"></i>
+                        Mercados Activos en este Partido
+                    </h4>
+                    <div id="ctrl_mercados_list" class="space-y-2 max-h-48 overflow-y-auto pr-1">
+                        <!-- Injected dynamically by JS -->
+                    </div>
+                </div>
+
+                <!-- Añadir Nuevos Mercados -->
+                <div class="border-t border-slate-200 pt-4 space-y-3">
+                    <h4 class="text-xs font-black uppercase tracking-widest text-slate-400 flex items-center gap-1.5">
+                        <i data-lucide="plus-circle" class="w-4 h-4 text-indigo-600"></i>
+                        Añadir Nuevo Mercado
+                    </h4>
+
+                    <form id="addMercadoForm" onsubmit="submitAddMercadoForm(event)" class="space-y-3 bg-slate-50 border border-slate-200 rounded-xl p-4">
+                        {% csrf_token %}
+                        <div class="grid grid-cols-3 gap-3">
+                            <div>
+                                <label class="block text-[10px] font-bold text-slate-500 mb-1 uppercase tracking-wider">Mercado</label>
+                                <select id="mkt_nombre" onchange="toggleMercadoOptions()" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-2.5 py-2 text-xs text-slate-800 font-semibold focus:outline-none focus:border-indigo-600">
+                                    <option value="Doble Oportunidad">Doble Oportunidad</option>
+                                    <option value="Ambos Equipos Anotan">Ambos Equipos Anotan</option>
+                                    <option value="Más/Menos 2.5">Más/Menos 2.5</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-[10px] font-bold text-slate-500 mb-1 uppercase tracking-wider">Cálculo de Cuotas</label>
+                                <div class="flex bg-slate-200/60 p-1 rounded-xl border border-slate-200/40">
+                                    <button type="button" id="btn-odds-manual" onclick="setOddsMode('manual')" class="flex-1 py-1 text-[10px] font-black uppercase tracking-wider rounded-lg transition-all text-center bg-white text-indigo-750 shadow-2xs border border-slate-200/50">
+                                        Manual
+                                    </button>
+                                    <button type="button" id="btn-odds-auto" onclick="setOddsMode('auto')" class="flex-1 py-1 text-[10px] font-bold uppercase tracking-wider rounded-lg transition-all text-center text-slate-500 hover:text-slate-700">
+                                        Auto
+                                    </button>
+                                </div>
+                                <input type="hidden" id="mkt_odds_mode" value="manual">
+                            </div>
+                            <div class="flex items-end">
+                                <button type="submit" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 rounded-xl text-xs transition-colors flex items-center justify-center gap-1">
+                                    <i data-lucide="save" class="w-4 h-4"></i>
+                                    Añadir Mercado
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Cuotas Dinámicas de las selecciones del Mercado -->
+                        <div id="mkt_selecciones_container" class="grid grid-cols-3 gap-2.5 pt-2 text-slate-800">
+                            <!-- Injected dynamically by JS according to Mercado selected -->
+                        </div>
+
+                        <div id="addMktMsg" class="hidden text-sm p-3 rounded-xl mt-2"></div>
+                    </form>
                 </div>
             </div>
 
-            <div class="bg-gray-800 rounded-lg p-6 border border-gray-700">
-                <h3 class="text-lg font-semibold mb-4">Acciones Rápidas</h3>
-                <div class="space-y-3">
-                    <a href="{% url 'operator:reporte_mensual' %}" class="block w-full text-center px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded">
-                        Exportar Reporte Mensual CSV
-                    </a>
-                    <a href="/admin/operator/bono/add/" class="block w-full text-center px-4 py-2 bg-green-600 hover:bg-green-700 rounded">
-                        Crear Bono Promocional
-                    </a>
-                    <a href="/admin/operator/alertaabuso/?revisado__exact=0" class="block w-full text-center px-4 py-2 bg-red-600 hover:bg-red-700 rounded">
-                        Ver Alertas de Abuso Pendientes
-                    </a>
-                </div>
+            <div class="flex justify-end pt-3 border-t border-slate-100 mt-4 gap-3">
+                <button type="button" onclick="closeEventoControlModal()" class="px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs transition-colors border border-slate-200">
+                    Cerrar Consola
+                </button>
+                <button type="submit" form="eventoControlForm" class="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs transition-colors flex items-center justify-center gap-1.5 shadow-sm">
+                    <i data-lucide="check-circle" class="w-4 h-4"></i>
+                    Guardar Cambios del Partido
+                </button>
             </div>
         </div>
-    </main>
+    </div>
+
+    <!-- MODAL ALERTAS DE ABUSO -->
+    <div id="alertasModal" class="fixed inset-0 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center hidden z-50 transition-opacity duration-300">
+        <div class="bg-white border border-slate-200 w-full max-w-4xl rounded-2xl p-6 shadow-2xl relative transform transition-all duration-300 scale-95 flex flex-col max-h-[90vh] text-slate-800">
+            <button onclick="closeAlertasModal()" class="absolute top-4 right-4 text-slate-400 hover:text-slate-600 transition-colors">
+                <i data-lucide="x" class="w-6 h-6"></i>
+            </button>
+            <div class="flex justify-between items-center mb-6">
+                <h3 class="text-xl font-black text-rose-600 flex items-center gap-2">
+                    <i data-lucide="shield-alert" class="w-6 h-6"></i>
+                    Alertas de Abuso Pendientes
+                </h3>
+                <button onclick="triggerAbuseCheck()" class="px-4 py-2 rounded-xl bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold flex items-center gap-1 transition-colors shadow-sm">
+                    Ejecutar Escaneo Manual
+                </button>
+            </div>
+
+            <div id="alertasMsg" class="hidden text-sm p-3 rounded-xl mb-4"></div>
+
+            <div class="overflow-y-auto flex-1 pr-1">
+                <!-- TABLA CONTENEDORA DE ALERTAS -->
+                <div id="alertas-table-container">
+                    <table class="w-full text-sm text-left">
+                        <thead class="border-b border-slate-200 text-slate-500 bg-slate-50/50">
+                            <tr>
+                                <th class="py-3 px-4 font-bold">Usuario</th>
+                                <th class="py-3 px-4 font-bold">Bono</th>
+                                <th class="py-3 px-4 font-bold">Tipo de Abuso</th>
+                                <th class="py-3 px-4 font-bold">Detalles</th>
+                                <th class="py-3 px-4 font-bold">Fecha</th>
+                                <th class="py-3 px-4 text-right font-bold">Acción</th>
+                            </tr>
+                        </thead>
+                        <tbody id="alertas-list">
+                            <!-- AJAX content -->
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- ESTADO VACIO PREMIUM Y CENTRADO -->
+                <div id="alertas-empty-state" class="hidden py-12 flex flex-col items-center justify-center text-center gap-3">
+                    <div class="w-16 h-16 rounded-full bg-emerald-50 flex items-center justify-center border border-emerald-100 text-emerald-600 shadow-lg shadow-emerald-500/5 animate-pulse mb-2">
+                        <i data-lucide="shield-check" class="w-10 h-10"></i>
+                    </div>
+                    <h4 class="text-lg font-bold text-slate-800">Sistema de Seguridad Protegido</h4>
+                    <p class="text-sm text-slate-500 max-w-sm font-medium">No hay alertas de abuso pendientes de revisión en este momento.</p>
+                </div>
+            </div>
+
+            <div class="flex justify-end mt-4 pt-4 border-t border-slate-100">
+                <button onclick="closeAlertasModal()" class="px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold transition-colors border border-slate-200 text-xs">
+                    Cerrar
+                </button>
+            </div>
+        </div>
+    </div>
 
     <script>
         lucide.createIcons();
+
+        // CONTROL DE PESTAÑAS (TABS)
+        function switchTab(tabName) {
+            const btnMetrics = document.getElementById('btn-tab-metrics');
+            const btnLive = document.getElementById('btn-tab-live-control');
+            const contentMetrics = document.getElementById('tab-metrics-content');
+            const contentLive = document.getElementById('tab-live-control-content');
+
+            if (tabName === 'metrics') {
+                btnMetrics.className = "flex-1 py-2.5 text-xs font-black uppercase tracking-wider rounded-xl transition-all outline-none text-center bg-white text-indigo-600 shadow-sm border border-slate-200/40 flex items-center justify-center gap-2";
+                btnLive.className = "flex-1 py-2.5 text-xs font-bold uppercase tracking-wider rounded-xl transition-all outline-none text-center text-slate-500 hover:text-slate-700 hover:bg-slate-200/50 flex items-center justify-center gap-2";
+                contentMetrics.classList.remove('hidden');
+                contentLive.classList.add('hidden');
+                updateMetrics();
+            } else {
+                btnLive.className = "flex-1 py-2.5 text-xs font-black uppercase tracking-wider rounded-xl transition-all outline-none text-center bg-white text-indigo-600 shadow-sm border border-slate-200/40 flex items-center justify-center gap-2";
+                btnMetrics.className = "flex-1 py-2.5 text-xs font-bold uppercase tracking-wider rounded-xl transition-all outline-none text-center text-slate-500 hover:text-slate-700 hover:bg-slate-200/50 flex items-center justify-center gap-2";
+                contentMetrics.classList.add('hidden');
+                contentLive.classList.remove('hidden');
+                loadLiveEventos();
+            }
+            lucide.createIcons();
+        }
+
+        // CARGAR Y LISTAR EVENTOS DEPORTIVOS
+        function loadLiveEventos(selectedEventoIdToRefresh = null) {
+            const tbody = document.getElementById('live-eventos-list');
+            tbody.innerHTML = '<tr><td colspan="7" class="py-4 text-center text-slate-400 font-medium bg-white">Cargando partidos...</td></tr>';
+
+            fetch('/api/operator/eventos/')
+                .then(r => r.json())
+                .then(data => {
+                    window.liveEventos = data; // Guardar en variable global
+                    tbody.innerHTML = '';
+                    if (data.length === 0) {
+                        tbody.innerHTML = '<tr><td colspan="7" class="py-6 text-center text-slate-400 font-semibold bg-white">No se han registrado eventos deportivos en el sistema.</td></tr>';
+                        return;
+                    }
+
+                    if (selectedEventoIdToRefresh) {
+                        const evt = data.find(e => String(e.id) === String(selectedEventoIdToRefresh));
+                        if (evt) {
+                            renderMercadosList(evt);
+                        }
+                    }
+
+                    data.forEach(evt => {
+                        const tr = document.createElement('tr');
+                        tr.className = 'border-b border-slate-100 hover:bg-slate-50/50 transition-colors bg-white';
+
+                        const f = new Date(evt.fecha_inicio).toLocaleString();
+                        
+                        let estadoBadge = '';
+                        if (evt.estado === 'en_vivo') {
+                            estadoBadge = `<span class="px-2 py-1 rounded-lg text-xs bg-rose-50 border border-rose-100 text-rose-600 font-bold animate-pulse">EN VIVO</span>`;
+                        } else if (evt.estado === 'programado') {
+                            estadoBadge = `<span class="px-2 py-1 rounded-lg text-xs bg-indigo-50 border border-indigo-100 text-indigo-600 font-bold">PROGRAMADO</span>`;
+                        } else if (evt.estado === 'finalizado') {
+                            estadoBadge = `<span class="px-2 py-1 rounded-lg text-xs bg-slate-50 border border-slate-200 text-slate-500 font-bold">FINALIZADO</span>`;
+                        } else if (evt.estado === 'suspendido') {
+                            estadoBadge = `<span class="px-2 py-1 rounded-lg text-xs bg-amber-50 border border-amber-100 text-amber-600 font-bold">SUSPENDIDO</span>`;
+                        } else {
+                            estadoBadge = `<span class="px-2 py-1 rounded-lg text-xs bg-rose-50 border border-rose-100 text-rose-600 font-bold">ANULADO</span>`;
+                        }
+
+                        tr.innerHTML = `
+                            <td class="py-3.5 px-4 font-semibold text-slate-700">${evt.local}</td>
+                            <td class="py-3.5 px-4 text-center text-slate-400 font-extrabold">vs</td>
+                            <td class="py-3.5 px-4 font-semibold text-slate-700">${evt.visitante}</td>
+                            <td class="py-3.5 px-4 font-mono font-bold text-indigo-600 text-sm">
+                                ${evt.goles_local} - ${evt.goles_visitante} <span class="text-xs text-slate-400 font-semibold font-sans">(${evt.periodo} - Min ${evt.minuto_actual > 90 ? 90 : evt.minuto_actual}')</span>
+                            </td>
+                            <td class="py-3.5 px-4">${estadoBadge}</td>
+                            <td class="py-3.5 px-4 text-xs text-slate-500 font-medium">${f}</td>
+                            <td class="py-3.5 px-4 text-right">
+                                <button onclick="openEventoControlModal('${evt.id}', '${evt.local}', '${evt.visitante}', ${evt.goles_local}, ${evt.goles_visitante}, '${evt.estado}', ${evt.minuto_actual}, '${evt.periodo}')" class="px-3.5 py-1.5 rounded-xl bg-indigo-50 hover:bg-indigo-100 border border-indigo-200 text-indigo-700 text-xs font-bold transition-all shadow-sm">
+                                    Gestionar en Vivo
+                                </button>
+                            </td>
+                        `;
+                        tbody.appendChild(tr);
+                    });
+                })
+                .catch(err => {
+                    tbody.innerHTML = `<tr><td colspan="7" class="py-4 text-center text-red-400">Error al cargar partidos: ${err}</td></tr>`;
+                });
+        }
+
+        // CREAR NUEVO PARTIDO
+        function openCreateEventoModal() {
+            const modal = document.getElementById('createEventoModal');
+            modal.classList.remove('hidden');
+            document.getElementById('createEventoForm').reset();
+            document.getElementById('createEvtMsg').className = 'hidden';
+            lucide.createIcons();
+        }
+
+        function closeCreateEventoModal() {
+            document.getElementById('createEventoModal').classList.add('hidden');
+        }
+
+        function submitCreateEventoForm(e) {
+            e.preventDefault();
+            const msgDiv = document.getElementById('createEvtMsg');
+            msgDiv.className = 'hidden';
+
+            const local = document.getElementById('evt_local').value.trim();
+            const visitante = document.getElementById('evt_visitante').value.trim();
+            const fechaVal = document.getElementById('evt_fecha').value;
+            const horaVal = document.getElementById('evt_hora').value;
+
+            if (!local || !visitante || !fechaVal || !horaVal) {
+                msgDiv.className = 'text-sm p-3 rounded-lg bg-red-600/20 text-red-400 border border-red-700/50';
+                msgDiv.textContent = 'Por favor, rellena todos los campos.';
+                return;
+            }
+
+            const payload = {
+                local: local,
+                visitante: visitante,
+                fecha_inicio: new Date(`${fechaVal}T${horaVal}`).toISOString()
+            };
+
+            fetch('/api/operator/eventos/', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': getCSRFToken()
+                },
+                body: JSON.stringify(payload)
+            })
+            .then(async r => {
+                const data = await r.json();
+                if (r.ok) {
+                    msgDiv.className = 'text-sm p-3 rounded-lg bg-green-600/20 text-green-400 border border-green-700/50';
+                    msgDiv.textContent = '¡Partido creado con éxito con mercado 1X2 por defecto!';
+                    setTimeout(() => {
+                        closeCreateEventoModal();
+                        loadLiveEventos();
+                    }, 1500);
+                } else {
+                    msgDiv.className = 'text-sm p-3 rounded-lg bg-red-600/20 text-red-400 border border-red-700/50';
+                    msgDiv.textContent = 'Error: ' + (data.error || JSON.stringify(data));
+                }
+            })
+            .catch(err => {
+                msgDiv.className = 'text-sm p-3 rounded-lg bg-red-600/20 text-red-400 border border-red-700/50';
+                msgDiv.textContent = 'Error de red: ' + err;
+            });
+        }
+
+        // CONSOLA EN VIVO / GESTIONAR PARTIDO
+        let currentLocalGoles = 0;
+        let currentVisitanteGoles = 0;
+
+        function renderMercadosList(evt) {
+            const listDiv = document.getElementById('ctrl_mercados_list');
+            if (!listDiv) return;
+            listDiv.innerHTML = '';
+
+            // Filtrar solo los mercados activos
+            const mercadosActivos = (evt.mercados || []).filter(m => m.activo);
+
+            if (!evt || mercadosActivos.length === 0) {
+                listDiv.innerHTML = '<p class="text-xs text-slate-500 italic">No hay mercados activos para este partido.</p>';
+                return;
+            }
+
+            mercadosActivos.forEach(mkt => {
+                const mktCard = document.createElement('div');
+                mktCard.className = 'bg-slate-50 border border-slate-200 rounded-xl p-3 space-y-2';
+
+                let seleccionesHTML = '';
+                mkt.selecciones.forEach(sel => {
+                    seleccionesHTML += `
+                        <div class="bg-white border border-slate-100 rounded-lg px-2.5 py-1.5 flex justify-between items-center text-xs shadow-sm">
+                            <span class="font-semibold text-slate-600">${sel.nombre}</span>
+                            <span class="font-mono font-bold text-indigo-600">f. ${parseFloat(sel.cuota).toFixed(2)}</span>
+                        </div>
+                    `;
+                });
+
+                mktCard.innerHTML = `
+                    <div class="flex justify-between items-center border-b border-slate-100 pb-1.5">
+                        <span class="text-xs font-extrabold text-slate-800">${mkt.nombre}</span>
+                        <button onclick="deleteMercado('${evt.id}', '${mkt.id}')" class="text-xs text-rose-600 hover:text-rose-800 font-bold flex items-center gap-1 transition-colors">
+                            <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+                            Eliminar
+                        </button>
+                    </div>
+                    <div class="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                        ${seleccionesHTML}
+                    </div>
+                `;
+                listDiv.appendChild(mktCard);
+            });
+            lucide.createIcons();
+        }
+
+        function deleteMercado(eventoId, mercadoId) {
+            if (!confirm('¿Estás seguro de que deseas eliminar este mercado del partido?')) {
+                return;
+            }
+
+            fetch(`/api/operator/eventos/${eventoId}/mercados/`, {
+                method: 'DELETE',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': getCSRFToken()
+                },
+                body: JSON.stringify({ mercado_id: mercadoId })
+            })
+            .then(async r => {
+                const data = await r.json();
+                if (r.ok) {
+                    loadLiveEventos(eventoId); // Recarga y actualiza los mercados
+                } else {
+                    alert('Error: ' + (data.error || JSON.stringify(data)));
+                }
+            })
+            .catch(err => {
+                alert('Error de red: ' + err);
+            });
+        }
+
+        function openEventoControlModal(eventoId, local, visitante, golesLocal, golesVisitante, estado, minuto, periodo) {
+            const modal = document.getElementById('eventoControlModal');
+            modal.classList.remove('hidden');
+            
+            document.getElementById('ctrl_evento_id').value = eventoId;
+            document.getElementById('ctrl_partido_titulo').textContent = `${local} vs ${visitante}`;
+            document.getElementById('ctrl_local_label').textContent = local;
+            document.getElementById('ctrl_visitante_label').textContent = visitante;
+
+            currentLocalGoles = golesLocal;
+            currentVisitanteGoles = golesVisitante;
+            document.getElementById('ctrl_goles_local').textContent = golesLocal;
+            document.getElementById('ctrl_goles_visitante').textContent = golesVisitante;
+
+            document.getElementById('ctrl_estado').value = estado;
+            document.getElementById('ctrl_minuto').value = minuto;
+            document.getElementById('ctrl_periodo').value = periodo;
+
+            // Inicializar campo de Fecha y Hora del evento
+            document.getElementById('ctrl_fecha_inicio').value = '';
+            if (window.liveEventos) {
+                const evt = window.liveEventos.find(e => String(e.id) === String(eventoId));
+                if (evt && evt.fecha_inicio) {
+                    const d = new Date(evt.fecha_inicio);
+                    const pad = num => String(num).padStart(2, '0');
+                    const yyyy = d.getFullYear();
+                    const mm = pad(d.getMonth() + 1);
+                    const dd = pad(d.getDate());
+                    const hh = pad(d.getHours());
+                    const min = pad(d.getMinutes());
+                    document.getElementById('ctrl_fecha_inicio').value = `${yyyy}-${mm}-${dd}T${hh}:${min}`;
+                }
+            }
+
+            document.getElementById('ctrlEvtMsg').className = 'hidden';
+            document.getElementById('addMktMsg').className = 'hidden';
+            document.getElementById('addMercadoForm').reset();
+            setOddsMode('manual');
+            
+            toggleMercadoOptions();
+
+            if (window.liveEventos) {
+                const evt = window.liveEventos.find(e => String(e.id) === String(eventoId));
+                if (evt) {
+                    renderMercadosList(evt);
+                }
+            }
+
+            lucide.createIcons();
+        }
+
+        function closeEventoControlModal() {
+            document.getElementById('eventoControlModal').classList.add('hidden');
+        }
+
+        function modifyGol(target, amount) {
+            if (target === 'local') {
+                currentLocalGoles = Math.max(0, currentLocalGoles + amount);
+                document.getElementById('ctrl_goles_local').textContent = currentLocalGoles;
+            } else {
+                currentVisitanteGoles = Math.max(0, currentVisitanteGoles + amount);
+                document.getElementById('ctrl_goles_visitante').textContent = currentVisitanteGoles;
+            }
+        }
+
+        function submitEventoControlForm(e) {
+            e.preventDefault();
+            const msgDiv = document.getElementById('ctrlEvtMsg');
+            msgDiv.className = 'hidden';
+
+            const id = document.getElementById('ctrl_evento_id').value;
+            const fechaInicioVal = document.getElementById('ctrl_fecha_inicio').value;
+            const payload = {
+                goles_local: currentLocalGoles,
+                goles_visitante: currentVisitanteGoles,
+                estado: document.getElementById('ctrl_estado').value,
+                minuto_actual: parseInt(document.getElementById('ctrl_minuto').value),
+                periodo: document.getElementById('ctrl_periodo').value,
+                fecha_inicio: fechaInicioVal ? new Date(fechaInicioVal).toISOString() : null
+            };
+
+            fetch(`/api/operator/eventos/${id}/`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': getCSRFToken()
+                },
+                body: JSON.stringify(payload)
+            })
+            .then(async r => {
+                const data = await r.json();
+                if (r.ok) {
+                    msgDiv.className = 'text-sm p-3 rounded-lg bg-green-600/20 text-green-400 border border-green-700/50';
+                    msgDiv.textContent = '¡Marcador y estado actualizados! Notificación en vivo transmitida.';
+                    setTimeout(() => {
+                        msgDiv.className = 'hidden';
+                        closeEventoControlModal();
+                        loadLiveEventos();
+                    }, 1200);
+                } else {
+                    msgDiv.className = 'text-sm p-3 rounded-lg bg-red-600/20 text-red-400 border border-red-700/50';
+                    msgDiv.textContent = 'Error: ' + (data.error || JSON.stringify(data));
+                }
+            })
+            .catch(err => {
+                msgDiv.className = 'text-sm p-3 rounded-lg bg-red-600/20 text-red-400 border border-red-700/50';
+                msgDiv.textContent = 'Error de red: ' + err;
+            });
+        }
+
+        // CONTROL DE CUOTAS PARA MERCADOS ADICIONALES
+        function toggleMercadoOptions() {
+            const mkt = document.getElementById('mkt_nombre').value;
+            const container = document.getElementById('mkt_selecciones_container');
+            container.innerHTML = '';
+
+            let inputsHTML = '';
+            if (mkt === 'Doble Oportunidad') {
+                inputsHTML = `
+                    <div>
+                        <label class="block text-[9px] font-bold text-gray-500 mb-1">1X (Local o Empate)</label>
+                        <input type="number" step="0.01" min="1.01" required id="cuota_1x" placeholder="Ej. 1.35" class="w-full bg-gray-900 border border-gray-700 rounded-lg px-2 py-1 text-xs text-white focus:outline-none focus:border-violet-500 font-mono">
+                    </div>
+                    <div>
+                        <label class="block text-[9px] font-bold text-gray-500 mb-1">X2 (Empate o Visita)</label>
+                        <input type="number" step="0.01" min="1.01" required id="cuota_x2" placeholder="Ej. 1.45" class="w-full bg-gray-900 border border-gray-700 rounded-lg px-2 py-1 text-xs text-white focus:outline-none focus:border-violet-500 font-mono">
+                    </div>
+                    <div>
+                        <label class="block text-[9px] font-bold text-gray-500 mb-1">12 (Local o Visita)</label>
+                        <input type="number" step="0.01" min="1.01" required id="cuota_12" placeholder="Ej. 1.25" class="w-full bg-gray-900 border border-gray-700 rounded-lg px-2 py-1 text-xs text-white focus:outline-none focus:border-violet-500 font-mono">
+                    </div>
+                `;
+            } else if (mkt === 'Ambos Equipos Anotan') {
+                inputsHTML = `
+                    <div>
+                        <label class="block text-[9px] font-bold text-gray-500 mb-1">Sí (Anotan ambos)</label>
+                        <input type="number" step="0.01" min="1.01" required id="cuota_si" placeholder="Ej. 1.95" class="w-full bg-gray-900 border border-gray-700 rounded-lg px-2 py-1 text-xs text-white focus:outline-none focus:border-violet-500 font-mono">
+                    </div>
+                    <div>
+                        <label class="block text-[9px] font-bold text-gray-500 mb-1">No (No anotan ambos)</label>
+                        <input type="number" step="0.01" min="1.01" required id="cuota_no" placeholder="Ej. 1.85" class="w-full bg-gray-900 border border-gray-700 rounded-lg px-2 py-1 text-xs text-white focus:outline-none focus:border-violet-500 font-mono font-semibold text-slate-700 placeholder-slate-400">
+                    </div>
+                `;
+            } else { // Más/Menos 2.5
+                inputsHTML = `
+                    <div>
+                        <label class="block text-[9px] font-bold text-gray-500 mb-1">Más de 2.5 Goles</label>
+                        <input type="number" step="0.01" min="1.01" required id="cuota_mas" placeholder="Ej. 1.80" class="w-full bg-gray-900 border border-gray-700 rounded-lg px-2 py-1 text-xs text-white focus:outline-none focus:border-violet-500 font-mono">
+                    </div>
+                    <div>
+                        <label class="block text-[9px] font-bold text-gray-500 mb-1">Menos de 2.5 Goles</label>
+                        <input type="number" step="0.01" min="1.01" required id="cuota_menos" placeholder="Ej. 1.90" class="w-full bg-gray-900 border border-gray-700 rounded-lg px-2 py-1 text-xs text-white focus:outline-none focus:border-violet-500 font-mono">
+                    </div>
+                `;
+            }
+            container.innerHTML = inputsHTML;
+
+            // Apply current mode's required status
+            const mode = document.getElementById('mkt_odds_mode').value;
+            container.querySelectorAll('input').forEach(input => {
+                input.required = (mode === 'manual');
+            });
+        }
+
+        function setOddsMode(mode) {
+            document.getElementById('mkt_odds_mode').value = mode;
+            const btnManual = document.getElementById('btn-odds-manual');
+            const btnAuto = document.getElementById('btn-odds-auto');
+            const container = document.getElementById('mkt_selecciones_container');
+
+            const activeClass = "flex-1 py-1 text-[10px] font-black uppercase tracking-wider rounded-lg transition-all text-center bg-white text-indigo-750 shadow-2xs border border-slate-200/50";
+            const inactiveClass = "flex-1 py-1 text-[10px] font-bold uppercase tracking-wider rounded-lg transition-all text-center text-slate-500 hover:text-slate-700";
+
+            if (mode === 'manual') {
+                btnManual.className = activeClass;
+                btnAuto.className = inactiveClass;
+                container.classList.remove('hidden');
+                container.querySelectorAll('input').forEach(input => {
+                    input.required = true;
+                });
+            } else {
+                btnManual.className = inactiveClass;
+                btnAuto.className = activeClass;
+                container.classList.add('hidden');
+                container.querySelectorAll('input').forEach(input => {
+                    input.required = false;
+                });
+            }
+        }
+
+        function submitAddMercadoForm(e) {
+            e.preventDefault();
+            const msgDiv = document.getElementById('addMktMsg');
+            msgDiv.className = 'hidden';
+
+            const id = document.getElementById('ctrl_evento_id').value;
+            const mkt = document.getElementById('mkt_nombre').value;
+            const mode = document.getElementById('mkt_odds_mode').value;
+            
+            const payload = {
+                nombre: mkt
+            };
+
+            if (mode === 'auto') {
+                payload.automatico = true;
+            } else {
+                payload.automatico = false;
+                let selecciones = [];
+                if (mkt === 'Doble Oportunidad') {
+                    selecciones = [
+                        { nombre: '1X', cuota: parseFloat(document.getElementById('cuota_1x').value) },
+                        { nombre: 'X2', cuota: parseFloat(document.getElementById('cuota_x2').value) },
+                        { nombre: '12', cuota: parseFloat(document.getElementById('cuota_12').value) }
+                    ];
+                } else if (mkt === 'Ambos Equipos Anotan') {
+                    selecciones = [
+                        { nombre: 'Sí', cuota: parseFloat(document.getElementById('cuota_si').value) },
+                        { nombre: 'No', cuota: parseFloat(document.getElementById('cuota_no').value) }
+                    ];
+                } else {
+                    selecciones = [
+                        { nombre: 'Más de 2.5', cuota: parseFloat(document.getElementById('cuota_mas').value) },
+                        { nombre: 'Menos de 2.5', cuota: parseFloat(document.getElementById('cuota_menos').value) }
+                    ];
+                }
+                payload.selecciones = selecciones;
+            }
+
+            fetch(`/api/operator/eventos/${id}/mercados/`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': getCSRFToken()
+                },
+                body: JSON.stringify(payload)
+            })
+            .then(async r => {
+                const data = await r.json();
+                if (r.ok) {
+                    msgDiv.className = 'text-sm p-3 rounded-lg bg-green-600/20 text-green-400 border border-green-700/50';
+                    msgDiv.textContent = '¡Nuevo mercado añadido con éxito con cuotas fijadas!';
+                    document.getElementById('addMercadoForm').reset();
+                    toggleMercadoOptions();
+                    loadLiveEventos(id); // Recarga y actualiza los mercados en el modal de forma reactiva
+                    setTimeout(() => { msgDiv.className = 'hidden'; }, 2000);
+                } else {
+                    msgDiv.className = 'text-sm p-3 rounded-lg bg-red-600/20 text-red-400 border border-red-700/50';
+                    msgDiv.textContent = 'Error: ' + (data.error || JSON.stringify(data));
+                }
+            })
+            .catch(err => {
+                msgDiv.className = 'text-sm p-3 rounded-lg bg-red-600/20 text-red-400 border border-red-700/50';
+                msgDiv.textContent = 'Error de red: ' + err;
+            });
+        }
+
 
         function updateMetrics() {
             fetch('/api/operator/metrics/')
                 .then(r => r.json())
                 .then(data => {
-                    document.getElementById('ggr-24h').textContent = 'S/ ' + data.ggr_24h;
-                    document.getElementById('ggr-7d').textContent = 'S/ ' + data.ggr_7d;
-                    document.getElementById('volume-24h').textContent = 'S/ ' + data.volume_24h.total_staked;
+                    document.getElementById('ggr-24h').textContent = 'f. ' + data.ggr_24h;
+                    document.getElementById('ggr-7d').textContent = 'f. ' + data.ggr_7d;
+                    document.getElementById('volume-24h').textContent = 'f. ' + data.volume_24h.total_staked;
                     document.getElementById('total-bets').textContent = data.volume_24h.total_apuestas + ' apuestas';
                     document.getElementById('active-1h').textContent = data.active_users_1h;
-                    document.getElementById('total-exposure').textContent = 'S/ ' + data.total_exposure;
+                    document.getElementById('total-exposure').textContent = 'f. ' + data.total_exposure;
                     document.getElementById('won-bets').textContent = data.volume_24h.apuestas_ganadas;
                     document.getElementById('lost-bets').textContent = data.volume_24h.apuestas_perdidas;
                     document.getElementById('pending-bets').textContent = data.volume_24h.apuestas_pendientes;
@@ -165,8 +1177,320 @@
                 .catch(err => console.error('Error fetching metrics:', err));
         }
 
+        function loadBonos() {
+            const tbody = document.getElementById('bonos-list');
+            if (!tbody) return;
+
+            fetch('/api/operator/bonos/')
+                .then(r => r.json())
+                .then(data => {
+                    tbody.innerHTML = '';
+                    if (data.length === 0) {
+                        tbody.innerHTML = '<tr><td colspan="6" class="py-4 text-center text-gray-500">No se han emitido bonos promocionales en el sistema</td></tr>';
+                        return;
+                    }
+
+                    data.forEach(b => {
+                        const tr = document.createElement('tr');
+                        tr.className = 'border-b border-slate-100 hover:bg-slate-50/50 transition-colors';
+
+                        let tipoLabel = 'Manual';
+                        if (b.tipo === 'bienvenida') tipoLabel = 'Bienvenida';
+                        else if (b.tipo === 'recarga') tipoLabel = 'Recarga';
+                        else if (b.tipo === 'codigo') tipoLabel = 'Código';
+
+                        let estadoBadge = '';
+                        if (b.estado === 'activo') {
+                            estadoBadge = '<span class="px-2.5 py-1 rounded-lg bg-emerald-50 text-emerald-700 border border-emerald-100 font-bold uppercase text-[10px]">Activo</span>';
+                        } else if (b.estado === 'completado') {
+                            estadoBadge = '<span class="px-2.5 py-1 rounded-lg bg-indigo-50 text-indigo-700 border border-indigo-100 font-bold uppercase text-[10px]">Completado</span>';
+                        } else if (b.estado === 'expirado') {
+                            estadoBadge = '<span class="px-2.5 py-1 rounded-lg bg-slate-50 text-slate-500 border border-slate-200 font-bold uppercase text-[10px]">Expirado</span>';
+                        } else {
+                            estadoBadge = '<span class="px-2.5 py-1 rounded-lg bg-rose-50 text-rose-700 border border-rose-100 font-bold uppercase text-[10px]">Revocado</span>';
+                        }
+
+                        const expDate = b.expira ? new Date(b.expira).toLocaleString('es-PE', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : 'Sin expiración';
+                        const rolloverApostado = parseFloat(b.rollover_apostado || 0).toFixed(2);
+                        const rolloverRequerido = parseFloat(b.rollover_requerido || 0).toFixed(2);
+
+                        tr.innerHTML = `
+                            <td class="py-3 px-4 font-semibold text-slate-700">${b.usuario_username || 'Desconocido'}</td>
+                            <td class="py-3 px-4">
+                                <span class="text-xs uppercase tracking-wider font-bold text-slate-400">
+                                    ${tipoLabel}
+                                </span>
+                            </td>
+                            <td class="py-3 px-4 text-right font-mono font-bold text-indigo-600">f. ${parseFloat(b.monto).toFixed(2)}</td>
+                            <td class="py-3 px-4">
+                                <div class="w-36">
+                                    <div class="flex justify-between text-[10px] text-slate-400 font-bold mb-1">
+                                        <span>${rolloverApostado} / ${rolloverRequerido}</span>
+                                        <span>${b.rollover_progreso}%</span>
+                                    </div>
+                                    <div class="w-full bg-slate-100 rounded-full h-1.5 overflow-hidden">
+                                        <div class="bg-indigo-600 h-full" style="width: ${b.rollover_progreso}%"></div>
+                                    </div>
+                                </div>
+                            </td>
+                            <td class="py-3 px-4 text-xs">
+                                ${estadoBadge}
+                            </td>
+                            <td class="py-3 px-3 text-xs text-gray-400">
+                                ${expDate}
+                            </td>
+                        `;
+                        tbody.appendChild(tr);
+                    });
+                })
+                .catch(err => {
+                    console.error('Error al cargar bonos:', err);
+                });
+        }
+
         setInterval(updateMetrics, 10000);
+        setInterval(loadBonos, 10000);
         updateMetrics();
+        loadBonos();
+
+        // Conexión WebSocket para sincronizar el panel del operador en tiempo real
+        let oddsSocket;
+        function connectLiveOddsSocket() {
+            const wsScheme = window.location.protocol === "https:" ? "wss" : "ws";
+            oddsSocket = new WebSocket(`${wsScheme}://${window.location.host}/ws/live-odds/`);
+
+            oddsSocket.onmessage = function (e) {
+                const data = JSON.parse(e.data);
+                console.log("WebSocket Recibido (Operador):", data);
+                
+                // Si hay alguna actualización relevante de eventos, recargamos el listado
+                if (data.tipo_evento === "EVENTO_TIEMPO" || 
+                    data.tipo_evento === "EVENTO_EN_VIVO" || 
+                    data.tipo_evento === "EVENTO_FINALIZADO" || 
+                    data.tipo_evento === "EVENTO_MODIFICADO" || 
+                    data.tipo_evento === "CATALOGO_ACTUALIZADO") {
+                    
+                    // Si la pestaña de control en vivo está activa, recargamos los partidos
+                    const btnLive = document.getElementById('btn-tab-live-control');
+                    if (btnLive && btnLive.classList.contains('bg-white')) {
+                        // Si el modal de control está abierto, le pasamos su ID para no perder el render de los mercados
+                        const ctrlIdInput = document.getElementById('ctrl_evento_id');
+                        const ctrlId = ctrlIdInput ? ctrlIdInput.value : null;
+                        const modal = document.getElementById('eventoControlModal');
+                        const modalVisible = modal && !modal.classList.contains('hidden');
+                        
+                        loadLiveEventos(modalVisible ? ctrlId : null);
+                    }
+                    
+                    // También actualizamos métricas
+                    updateMetrics();
+                }
+            };
+
+            oddsSocket.onclose = function (e) {
+                console.warn("WebSocket cerrado para el operador. Intentando reconectar en 5s...");
+                setTimeout(connectLiveOddsSocket, 5000);
+            };
+        }
+
+        connectLiveOddsSocket();
+
+        // CONTROL DE MODALES
+
+        function getCSRFToken() {
+            let cookieValue = null;
+            if (document.cookie && document.cookie !== '') {
+                const cookies = document.cookie.split(';');
+                for (let i = 0; i < cookies.length; i++) {
+                    const cookie = cookies[i].trim();
+                    if (cookie.substring(0, 10) === 'csrftoken=') {
+                        cookieValue = decodeURIComponent(cookie.substring(10));
+                        break;
+                    }
+                }
+            }
+            if (!cookieValue) {
+                const element = document.querySelector('[name=csrfmiddlewaretoken]');
+                if (element) {
+                    cookieValue = element.value;
+                }
+            }
+            return cookieValue;
+        }
+        function openBonoModal() {
+            const modal = document.getElementById('bonoModal');
+            modal.classList.remove('hidden');
+            document.getElementById('bonoForm').reset();
+            document.getElementById('bonoMsg').className = 'hidden text-sm p-3 rounded-lg';
+            lucide.createIcons();
+        }
+
+        function closeBonoModal() {
+            document.getElementById('bonoModal').classList.add('hidden');
+        }
+
+        function submitBonoForm(e) {
+            e.preventDefault();
+            const msgDiv = document.getElementById('bonoMsg');
+            msgDiv.className = 'hidden';
+
+            const tipo = document.getElementById('bono_tipo').value;
+            const payload = {
+                tipo: tipo,
+                monto: parseFloat(document.getElementById('bono_monto').value),
+                rollover_multiplier: parseFloat(document.getElementById('bono_rollover').value),
+            };
+
+            const fechaVal = document.getElementById('bono_fecha').value;
+            const horaVal = document.getElementById('bono_hora').value;
+            if (fechaVal && horaVal) {
+                payload.expira = new Date(`${fechaVal}T${horaVal}`).toISOString();
+            }
+
+            if (tipo === 'codigo') {
+                payload.codigo = document.getElementById('bono_codigo').value.trim().toUpperCase();
+                payload.usos_maximos = parseInt(document.getElementById('bono_usos_maximos').value);
+            }
+
+            fetch('/api/operator/bonos/', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': getCSRFToken()
+                },
+                body: JSON.stringify(payload)
+            })
+            .then(async r => {
+                const data = await r.json();
+                if (r.ok) {
+                    msgDiv.className = 'text-sm p-3 rounded-lg bg-green-600/20 text-green-400 border border-green-700/50';
+                    msgDiv.textContent = data.message || '¡Bono creado con éxito!';
+                    setTimeout(() => {
+                        closeBonoModal();
+                        loadBonos(); 
+                    }, 1500);
+                } else {
+                    msgDiv.className = 'text-sm p-3 rounded-lg bg-red-600/20 text-red-400 border border-red-700/50';
+                    msgDiv.textContent = 'Error: ' + (data.error || JSON.stringify(data));
+                }
+            })
+            .catch(err => {
+                msgDiv.className = 'text-sm p-3 rounded-lg bg-red-600/20 text-red-400 border border-red-700/50';
+                msgDiv.textContent = 'Error al conectar con la API: ' + err;
+            });
+        }
+
+        function openAlertasModal() {
+            const modal = document.getElementById('alertasModal');
+            modal.classList.remove('hidden');
+            document.getElementById('alertasMsg').className = 'hidden';
+            loadAlertas();
+            lucide.createIcons();
+        }
+
+        function closeAlertasModal() {
+            document.getElementById('alertasModal').classList.add('hidden');
+        }
+
+        function loadAlertas() {
+            const tbody = document.getElementById('alertas-list');
+            const tableContainer = document.getElementById('alertas-table-container');
+            const emptyState = document.getElementById('alertas-empty-state');
+            
+            tbody.innerHTML = '<tr><td colspan="6" class="py-4 text-center text-gray-500 font-medium">Cargando alertas...</td></tr>';
+            tableContainer.classList.remove('hidden');
+            emptyState.classList.add('hidden');
+
+            fetch('/api/operator/alertas-abuso/?pendientes=true')
+                .then(r => r.json())
+                .then(data => {
+                    tbody.innerHTML = '';
+                    if (data.length === 0) {
+                        tableContainer.classList.add('hidden');
+                        emptyState.classList.remove('hidden');
+                        lucide.createIcons();
+                        return;
+                    }
+
+                    tableContainer.classList.remove('hidden');
+                    emptyState.classList.add('hidden');
+
+                    data.forEach(al => {
+                        const tr = document.createElement('tr');
+                        tr.className = 'border-b border-gray-700/50 hover:bg-gray-700/30 transition-colors';
+
+                        const f = new Date(al.creado).toLocaleString();
+                        const detString = JSON.stringify(al.detalle);
+
+                        tr.innerHTML = `
+                            <td class="py-3 px-3 font-semibold text-gray-300">${al.usuario_username}</td>
+                            <td class="py-3 px-3 text-xs text-gray-400">${al.bono_tipo.toUpperCase()} (f. ${parseFloat(al.bono_monto).toFixed(2)})</td>
+                            <td class="py-3 px-3">
+                                <span class="px-2 py-1 rounded text-xs bg-red-600/20 text-red-400 font-bold">
+                                    ${al.tipo === 'risk_free' ? 'Apuesta Sin Riesgo' : al.tipo === 'matched_betting' ? 'Matched Betting' : 'Arbitraje'}
+                                </span>
+                            </td>
+                            <td class="py-3 px-3 text-xs text-gray-500 max-w-xs truncate" title='${detString}'>
+                                ${al.tipo === 'risk_free' ? `Total Apostado: f. ${parseFloat(al.detalle.total_apostado).toFixed(2)}, Ganancia Garantizada: f. ${parseFloat(al.detalle.ganancia_minima).toFixed(2)}` : `Staked: f. ${parseFloat(al.detalle.total_apostado).toFixed(2)}, Garantizada: f. ${parseFloat(al.detalle.ganancia_garantizada).toFixed(2)}`}
+                            </td>
+                            <td class="py-3 px-3 text-xs text-gray-400">${f}</td>
+                            <td class="py-3 px-3 text-right">
+                                <button onclick="revisarAlerta('${al.id}')" class="px-2.5 py-1 rounded bg-green-600 hover:bg-green-700 text-white text-xs font-semibold transition-colors">
+                                    Marcar Revisada
+                                </button>
+                            </td>
+                        `;
+                        tbody.appendChild(tr);
+                    });
+                    lucide.createIcons();
+                })
+                .catch(err => {
+                    tbody.innerHTML = `<tr><td colspan="6" class="py-4 text-center text-red-400">Error al cargar alertas: ${err}</td></tr>`;
+                });
+        }
+
+        function revisarAlerta(alertaId) {
+            fetch(`/api/operator/alertas-abuso/${alertaId}/revisar/`, {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': getCSRFToken()
+                }
+            })
+            .then(r => {
+                if (r.ok) {
+                    loadAlertas();
+                } else {
+                    alert('Error al marcar la alerta como revisada');
+                }
+            })
+            .catch(err => console.error(err));
+        }
+
+        function triggerAbuseCheck() {
+            const msgDiv = document.getElementById('alertasMsg');
+            msgDiv.className = 'hidden';
+
+            fetch('/api/operator/alertas-abuso/', {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': getCSRFToken()
+                }
+            })
+            .then(r => {
+                if (r.ok) {
+                    msgDiv.className = 'text-sm p-3 rounded-lg bg-green-600/20 text-green-400 border border-green-700/50';
+                    msgDiv.textContent = '¡Análisis de abuso ejecutado correctamente!';
+                    loadAlertas();
+                } else {
+                    msgDiv.className = 'text-sm p-3 rounded-lg bg-red-600/20 text-red-400 border border-red-700/50';
+                    msgDiv.textContent = 'Error al ejecutar el escaneo de abuso.';
+                }
+            })
+            .catch(err => {
+                msgDiv.className = 'text-sm p-3 rounded-lg bg-red-600/20 text-red-400 border border-red-700/50';
+                msgDiv.textContent = 'Error de red al ejecutar escaneo.';
+            });
+        }
     </script>
 </body>
 </html>

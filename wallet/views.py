@@ -18,6 +18,7 @@ class BilleteraHTMLView(LoginRequiredMixin, View):
     login_url = "login_html"
 
     def obtener_contexto(self, user):
+        from panel.rollover import get_bono_info_usuario
         return {
             "saldo_disponible": LedgerEntry.get_balance(
                 user, TipoCuenta.WALLET_USUARIO
@@ -26,6 +27,7 @@ class BilleteraHTMLView(LoginRequiredMixin, View):
                 user, TipoCuenta.APUESTAS_PENDIENTES
             ),
             "saldo_bonos": LedgerEntry.get_balance(user, TipoCuenta.BONOS),
+            "bonos_info": get_bono_info_usuario(user),
         }
 
     def get(self, request):
@@ -74,5 +76,28 @@ class RetiroHTMLView(LoginRequiredMixin, View):
             )
         except ValidationError as e:
             messages.error(request, e.message if hasattr(e, "message") else str(e))
+
+        return redirect("wallet_billetera")
+
+
+class ReclamarCodigoBonoHTMLView(LoginRequiredMixin, View):
+    """Procesa el formulario de canjeo de código promocional."""
+
+    login_url = "login_html"
+
+    def post(self, request):
+        codigo = request.POST.get("codigo", "").strip()
+        if not codigo:
+            messages.error(request, "Por favor ingresa un código promocional.")
+            return redirect("wallet_billetera")
+
+        from panel.services import reclamar_codigo_bono
+        try:
+            reclamar_codigo_bono(request.user, codigo)
+            messages.success(request, f"¡Código promocional '{codigo.upper()}' canjeado con éxito! Tu bono ha sido acreditado.")
+        except ValidationError as e:
+            messages.error(request, e.message if hasattr(e, "message") else str(e))
+        except Exception as e:
+            messages.error(request, f"Error al canjear el código: {str(e)}")
 
         return redirect("wallet_billetera")

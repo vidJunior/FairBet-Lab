@@ -285,3 +285,135 @@ class CombinedAndLiveBettingTests(TestCase):
         with self.assertRaises(ValidationError):
             crear_apuesta(self.user, self.sel1_local.id, Decimal("10.00"))
 
+
+class OperatorEventosTestCase(TestCase):
+    def setUp(self):
+        self.user = User.objects.create_user(username="operador_user", password="securepassword123")
+        self.perfil = PerfilUsuario.objects.create(
+            user=self.user,
+            fecha_nacimiento=timezone.now().date() - timezone.timedelta(days=365 * 25),
+            dni="99999999",
+            estado=EstadoPerfil.VERIFICADO
+        )
+        recargar(self.user, Decimal("500.0000"))
+
+    def test_crear_evento_operador_automatico_1x2(self):
+        from betting.services import crear_evento_operador
+        from betting.models import Evento
+
+        fecha = timezone.now() + timezone.timedelta(days=2)
+        evento = crear_evento_operador(
+            local="Boca Juniors",
+            visitante="River Plate",
+            fecha_inicio=fecha
+        )
+
+        self.assertIsNotNone(evento)
+        self.assertEqual(evento.local, "Boca Juniors")
+        self.assertEqual(evento.visitante, "River Plate")
+        self.assertEqual(evento.estado, EstadoEvento.PROGRAMADO)
+
+        # Verificar mercado 1X2 automático
+        mercado_1x2 = evento.mercados.filter(nombre="1X2").first()
+        self.assertIsNotNone(mercado_1x2)
+        self.assertTrue(mercado_1x2.activo)
+
+        # Selecciones del mercado 1X2
+        selecciones = mercado_1x2.selecciones.all().order_by("id")
+        self.assertEqual(selecciones.count(), 3)
+        self.assertEqual(selecciones[0].nombre, "Local")
+        self.assertEqual(selecciones[1].nombre, "Empate")
+        self.assertEqual(selecciones[2].nombre, "Visitante")
+
+    def test_crear_mercado_operador(self):
+        from betting.services import crear_evento_operador, crear_mercado_operador
+        evento = crear_evento_operador(
+            local="Barcelona",
+            visitante="Real Madrid",
+            fecha_inicio=timezone.now() + timezone.timedelta(days=2)
+        )
+
+        selecciones_data = [
+            {"nombre": "Sí", "cuota": Decimal("1.8000")},
+            {"nombre": "No", "cuota": Decimal("2.0000")}
+        ]
+
+        mercado = crear_mercado_operador(
+            evento_id=evento.id,
+            mercado_nombre="Ambos Equipos Anotan",
+            selecciones_datos=selecciones_data
+        )
+
+        self.assertIsNotNone(mercado)
+        self.assertEqual(mercado.nombre, "Ambos Equipos Anotan")
+        self.assertEqual(mercado.selecciones.count(), 2)
+
+        # Intentar crear duplicado debe dar ValidationError
+        with self.assertRaises(ValidationError):
+            crear_mercado_operador(
+                evento_id=evento.id,
+                mercado_nombre="Ambos Equipos Anotan",
+                selecciones_datos=selecciones_data
+            )
+
+    def test_actualizar_evento_y_liquidacion_apuestas(self):
+        from betting.services import crear_evento_operador, crear_apuesta, actualizar_evento_operador
+        evento = crear_evento_operador(
+            local="Juventus",
+            visitante="Milan",
+            fecha_inicio=timezone.now() + timezone.timedelta(days=1)
+        )
+
+        # Obtener selecciones del mercado automático 1X2
+        mercado = evento.mercados.get(nombre="1X2")
+        sel_local = mercado.selecciones.get(nombre="Local")
+
+        # El usuario hace una apuesta
+        monto = Decimal("100.0000")
+        apuesta = crear_apuesta(self.user, sel_local.id, monto)
+        self.assertEqual(apuesta.estado, EstadoApuesta.ACCEPTED)
+
+        # Actualizar a en vivo (la transición inicial de PROGRAMADO a EN_VIVO resetea el minuto a 0 por regla de negocio)
+        actualizar_evento_operador(
+            evento_id=evento.id,
+            goles_local=0,
+            goles_visitante=0,
+            estado=EstadoEvento.EN_VIVO,
+            minuto_actual=0,
+            periodo="1T"
+        )
+        evento.refresh_from_db()
+        self.assertEqual(evento.estado, EstadoEvento.EN_VIVO)
+        self.assertEqual(evento.minuto_actual, 0)
+
+        # Actualizar el minuto dentro del estado EN_VIVO a 10
+        actualizar_evento_operador(
+            evento_id=evento.id,
+            goles_local=0,
+            goles_visitante=0,
+            estado=EstadoEvento.EN_VIVO,
+            minuto_actual=10,
+            periodo="1T"
+        )
+        evento.refresh_from_db()
+        self.assertEqual(evento.minuto_actual, 10)
+
+        # Finalizar el partido con victoria local 2-1
+        actualizar_evento_operador(
+            evento_id=evento.id,
+            goles_local=2,
+            goles_visitante=1,
+            estado=EstadoEvento.FINALIZADO,
+            minuto_actual=90,
+            periodo="2T"
+        )
+
+        # Verificar que la apuesta se liquidó como ganadora
+        apuesta.refresh_from_db()
+        self.assertEqual(apuesta.estado, EstadoApuesta.WON)
+
+        # Saldo esperado: 500 inicial - 100 apuesta + 200 payout (cuota Local es 2.0000) = 600.0000
+        saldo_final = LedgerEntry.get_balance(self.user, TipoCuenta.WALLET_USUARIO)
+        self.assertEqual(saldo_final, Decimal("600.0000"))
+
+

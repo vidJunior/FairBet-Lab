@@ -2,6 +2,7 @@ from django.shortcuts import render, redirect
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.core.exceptions import ValidationError
+from django.http import JsonResponse
 from decimal import Decimal
 
 from config.choices import TipoCuenta, EstadoEvento
@@ -45,8 +46,16 @@ def catalogo_html(request):
     for ap in apuestas_abiertas:
         ap.cashout_val = calcular_cashout(ap)
 
+    from panel.models import Bono
+    from config.choices import EstadoBono
+    saldo_bono = LedgerEntry.get_balance(request.user, TipoCuenta.BONOS)
+    tiene_bono_activo = Bono.objects.filter(usuario=request.user, estado=EstadoBono.ACTIVO).exists()
+    tiene_bono_disponible = tiene_bono_activo and (saldo_bono > 0)
+
     context = {
         "saldo": saldo,
+        "saldo_bono": saldo_bono,
+        "tiene_bono_disponible": tiene_bono_disponible,
         "eventos_en_vivo": eventos_en_vivo,
         "eventos_programados": eventos_programados,
         "eventos_finalizados": eventos_finalizados,
@@ -62,6 +71,7 @@ def apostar_html(request):
         seleccion_ids_raw = request.POST.get("seleccion_ids")
         cuotas_esperadas_raw = request.POST.get("cuotas_esperadas")
         tipo_apuesta = request.POST.get("tipo_apuesta", "combinada")
+        usar_bono = request.POST.get("usar_bono") in ["true", "on"]
         
         if not seleccion_ids_raw:
             messages.error(request, "Faltan selecciones para la apuesta.")
@@ -73,6 +83,14 @@ def apostar_html(request):
             if len(seleccion_ids) == 0:
                 messages.error(request, "Debes seleccionar al menos una cuota.")
                 return redirect("catalogo_html")
+
+            if usar_bono:
+                from panel.models import Bono
+                from config.choices import EstadoBono
+                tiene_bono_activo = Bono.objects.filter(usuario=request.user, estado=EstadoBono.ACTIVO).exists()
+                if not tiene_bono_activo:
+                    messages.error(request, "No tienes ningún bono activo disponible para usar.")
+                    return redirect("catalogo_html")
 
             cuotas_esperadas = {}
             if cuotas_esperadas_raw:
@@ -96,7 +114,7 @@ def apostar_html(request):
                     try:
                         monto_dec = Decimal(str(monto))
                         cuota_esp = cuotas_esperadas.get(str(sid))
-                        crear_apuesta(request.user, sid, monto_dec, cuota_esperada=cuota_esp)
+                        crear_apuesta(request.user, sid, monto_dec, cuota_esperada=cuota_esp, usar_bono=usar_bono)
                         exitos += 1
                     except ValidationError as e:
                         errores.append(str(e.message if hasattr(e, "message") else e))
@@ -115,11 +133,11 @@ def apostar_html(request):
                     
                 monto = Decimal(monto_raw)
                 if len(seleccion_ids) == 1:
-                    crear_apuesta(request.user, seleccion_ids[0], monto, cuota_esperada=cuotas_esperadas.get(str(seleccion_ids[0])))
+                    crear_apuesta(request.user, seleccion_ids[0], monto, cuota_esperada=cuotas_esperadas.get(str(seleccion_ids[0])), usar_bono=usar_bono)
                     messages.success(request, "¡Tu apuesta simple ha sido aceptada con éxito!")
                 else:
                     from betting.services import crear_apuesta_combinada
-                    crear_apuesta_combinada(request.user, seleccion_ids, monto, cuotas_esperadas=cuotas_esperadas)
+                    crear_apuesta_combinada(request.user, seleccion_ids, monto, cuotas_esperadas=cuotas_esperadas, usar_bono=usar_bono)
                     messages.success(request, "¡Tu apuesta combinada ha sido aceptada con éxito!")
 
         except ValidationError as e:
@@ -271,3 +289,62 @@ def historial_apuestas(request):
     }
     return render(request, "betting/historial.html", context)
 
+
+@login_required(login_url="login_html")
+def catalogo_json(request):
+    """
+    Devuelve los eventos agrupados (en_vivo, programados, finalizados) en formato JSON
+    para la actualización parcial del catálogo sin recargar la página completa.
+    """
+
+    def serializar_evento(evento):
+        mercados_data = []
+        for mercado in evento.mercados.all():
+            selecciones_data = []
+            for sel in mercado.selecciones.all():
+                selecciones_data.append({
+                    "id": sel.id,
+                    "nombre": sel.nombre,
+                    "cuota": str(sel.cuota),
+                })
+            mercados_data.append({
+                "id": mercado.id,
+                "nombre": mercado.nombre,
+                "activo": mercado.activo,
+                "resuelto": mercado.resuelto,
+                "selecciones": selecciones_data,
+            })
+        return {
+            "id": evento.id,
+            "local": evento.local,
+            "visitante": evento.visitante,
+            "estado": evento.estado,
+            "goles_local": evento.goles_local,
+            "goles_visitante": evento.goles_visitante,
+            "minuto_actual": evento.minuto_actual,
+            "periodo": evento.periodo,
+            "fecha_inicio": evento.fecha_inicio.isoformat() if evento.fecha_inicio else None,
+            "mercados": mercados_data,
+        }
+
+    eventos_en_vivo = list(
+        Evento.objects.filter(estado=EstadoEvento.EN_VIVO)
+        .prefetch_related("mercados__selecciones")
+        .order_by("fecha_inicio")
+    )
+    eventos_programados = list(
+        Evento.objects.filter(estado=EstadoEvento.PROGRAMADO)
+        .prefetch_related("mercados__selecciones")
+        .order_by("fecha_inicio")
+    )
+    eventos_finalizados = list(
+        Evento.objects.filter(estado=EstadoEvento.FINALIZADO)
+        .prefetch_related("mercados__selecciones")
+        .order_by("-fecha_inicio")[:20]
+    )
+
+    return JsonResponse({
+        "en_vivo": [serializar_evento(e) for e in eventos_en_vivo],
+        "programados": [serializar_evento(e) for e in eventos_programados],
+        "finalizados": [serializar_evento(e) for e in eventos_finalizados],
+    })

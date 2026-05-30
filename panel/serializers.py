@@ -44,6 +44,9 @@ class BonoCreateSerializer(serializers.Serializer):
     def create(self, validated_data):
         from django.contrib.auth import get_user_model
         from panel.models import Bono
+        from config.choices import TipoCuenta
+        from wallet.services import registrar_movimiento
+        import uuid
 
         User = get_user_model()
         usuario = User.objects.get(pk=validated_data["usuario_id"])
@@ -55,6 +58,19 @@ class BonoCreateSerializer(serializers.Serializer):
             rollover_multiplier=validated_data.get("rollover_multiplier", Decimal("5.00")),
             expira=validated_data.get("expira"),
         )
+
+        # Registrar los asientos contables en Billetera (Partida Doble)
+        # Débito a la Casa (pérdida promocional) y Crédito a la cuenta de Bonos del Usuario
+        tid = uuid.uuid4()
+        registrar_movimiento(
+            tid,
+            usuario_debito=None,
+            cuenta_debito=TipoCuenta.CASA,
+            usuario_credito=usuario,
+            cuenta_credito=TipoCuenta.BONOS,
+            monto=validated_data["monto"],
+        )
+
         return bono
 
 

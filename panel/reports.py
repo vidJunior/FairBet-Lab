@@ -26,7 +26,7 @@ def generate_monthly_report(year, month):
             creado__lt=fin_mes,
         )
         .select_related("usuario", "usuario__perfil", "seleccion__mercado__evento")
-        .prefetch_related("selecciones__seleccion__mercado__evento")
+        .prefetch_related("detalles__seleccion__mercado__evento")
         .order_by("creado")
     )
 
@@ -43,7 +43,7 @@ def generate_monthly_report(year, month):
             seleccion_nombre = apuesta.seleccion.nombre
             mercado_nombre = apuesta.seleccion.mercado.nombre
         elif apuesta.tipo == "COMBINADA":
-            detalles = apuesta.selecciones.select_related(
+            detalles = apuesta.detalles.select_related(
                 "seleccion__mercado__evento"
             ).all()
             if detalles.exists():
@@ -78,6 +78,7 @@ def generate_monthly_report(year, month):
             "usuario_dni": dni,
             "usuario_nombre": apuesta.usuario.username,
             "estado_apuesta": apuesta.estado,
+            "usar_bono": "Sí" if apuesta.usar_bono else "No",
         })
 
     return filas

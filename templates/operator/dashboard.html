@@ -537,6 +537,14 @@
                         </div>
                     </div>
 
+                    <!-- Fecha y Hora de Inicio del Evento -->
+                    <div class="grid grid-cols-1 gap-3">
+                        <div>
+                            <label class="block text-[10px] font-bold text-slate-500 mb-1 uppercase tracking-wider">Fecha y Hora de Inicio</label>
+                            <input type="datetime-local" id="ctrl_fecha_inicio" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-2.5 py-1.5 text-xs text-slate-800 font-semibold focus:outline-none focus:border-indigo-600">
+                        </div>
+                    </div>
+
                     <div id="ctrlEvtMsg" class="hidden text-sm p-3 rounded-xl"></div>
                 </form>
 
@@ -912,6 +920,22 @@
             document.getElementById('ctrl_minuto').value = minuto;
             document.getElementById('ctrl_periodo').value = periodo;
 
+            // Inicializar campo de Fecha y Hora del evento
+            document.getElementById('ctrl_fecha_inicio').value = '';
+            if (window.liveEventos) {
+                const evt = window.liveEventos.find(e => String(e.id) === String(eventoId));
+                if (evt && evt.fecha_inicio) {
+                    const d = new Date(evt.fecha_inicio);
+                    const pad = num => String(num).padStart(2, '0');
+                    const yyyy = d.getFullYear();
+                    const mm = pad(d.getMonth() + 1);
+                    const dd = pad(d.getDate());
+                    const hh = pad(d.getHours());
+                    const min = pad(d.getMinutes());
+                    document.getElementById('ctrl_fecha_inicio').value = `${yyyy}-${mm}-${dd}T${hh}:${min}`;
+                }
+            }
+
             document.getElementById('ctrlEvtMsg').className = 'hidden';
             document.getElementById('addMktMsg').className = 'hidden';
             document.getElementById('addMercadoForm').reset();
@@ -949,12 +973,14 @@
             msgDiv.className = 'hidden';
 
             const id = document.getElementById('ctrl_evento_id').value;
+            const fechaInicioVal = document.getElementById('ctrl_fecha_inicio').value;
             const payload = {
                 goles_local: currentLocalGoles,
                 goles_visitante: currentVisitanteGoles,
                 estado: document.getElementById('ctrl_estado').value,
                 minuto_actual: parseInt(document.getElementById('ctrl_minuto').value),
-                periodo: document.getElementById('ctrl_periodo').value
+                periodo: document.getElementById('ctrl_periodo').value,
+                fecha_inicio: fechaInicioVal ? new Date(fechaInicioVal).toISOString() : null
             };
 
             fetch(`/api/operator/eventos/${id}/`, {
@@ -972,6 +998,7 @@
                     msgDiv.textContent = '¡Marcador y estado actualizados! Notificación en vivo transmitida.';
                     setTimeout(() => {
                         msgDiv.className = 'hidden';
+                        closeEventoControlModal();
                         loadLiveEventos();
                     }, 1200);
                 } else {

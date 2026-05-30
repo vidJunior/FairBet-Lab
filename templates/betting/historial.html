@@ -158,6 +158,11 @@
                   <span class="text-xs font-extrabold {% if apuesta.tipo == 'COMBINADA' %}text-indigo-600 bg-indigo-50{% else %}text-slate-600 bg-slate-50{% endif %} px-2 py-0.5 rounded-lg border border-slate-200/50">
                     {{ apuesta.tipo }}
                   </span>
+                  {% if apuesta.usar_bono %}
+                  <span class="text-xs font-black text-yellow-800 bg-yellow-100 px-2 py-0.5 rounded-lg border border-yellow-300 uppercase tracking-wider animate-pulse">
+                    BONO BIENVENIDA
+                  </span>
+                  {% endif %}
                 </div>
                 <div class="flex items-center gap-1.5 text-xs text-slate-400 font-medium">
                   <i data-lucide="calendar" class="w-3.5 h-3.5"></i>

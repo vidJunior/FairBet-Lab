@@ -1,4 +1,4 @@
-from django.urls import path
+from django.urls import path, include
 from api.views import verify_audit_chain_api
 from drf_spectacular.views import (
     SpectacularAPIView,
@@ -35,4 +35,5 @@ urlpatterns = [
     path("betting/catalogo/", CatalogoEventosAPIView.as_view(), name="api_betting_catalogo"),
     path("betting/apostar/", CrearApuestaAPIView.as_view(), name="api_betting_apostar"),
     path('admin/audit/verify/', verify_audit_chain_api, name='audit_verify_chain'),
+    path("operator/", include(panel_api_urls)),
 ]

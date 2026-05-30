@@ -50,6 +50,13 @@ class Bono(models.Model):
         blank=True,
         help_text="Fecha de expiración del bono",
     )
+    codigo_bono = models.ForeignKey(
+        "CodigoBono",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="bonos_redimidos",
+    )
 
     class Meta:
         ordering = ["-creado"]
@@ -140,3 +147,29 @@ class AlertaAbuso(models.Model):
 
     def __str__(self):
         return f"Alerta {self.tipo} - {self.usuario.username} - {self.creado.strftime('%Y-%m-%d')}"
+
+
+class CodigoBono(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    codigo = models.CharField(max_length=50, unique=True, help_text="Código promocional único")
+    monto = models.DecimalField(max_digits=10, decimal_places=4)
+    rollover_multiplier = models.DecimalField(
+        max_digits=4,
+        decimal_places=2,
+        default=Decimal("5.00"),
+        help_text="Multiplicador de rollover para el bono",
+    )
+    usos_maximos = models.IntegerField(help_text="Cantidad máxima de usuarios que pueden canjearlo")
+    usos_actuales = models.IntegerField(default=0, help_text="Cantidad de canjes realizados")
+    expira = models.DateTimeField(help_text="Fecha de expiración obligatoria")
+    creado = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-creado"]
+
+    def __str__(self):
+        return f"Código {self.codigo} (Cupos: {self.usos_actuales}/{self.usos_maximos})"
+
+    @property
+    def esta_activo(self):
+        return self.expira > timezone.now() and self.usos_actuales < self.usos_maximos

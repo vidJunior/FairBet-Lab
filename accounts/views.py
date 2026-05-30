@@ -53,6 +53,9 @@ class RegistroHTMLView(View):
                         dni=dni,
                         estado=EstadoPerfil.VERIFICADO,
                     )
+                    from panel.services import crear_bono_bienvenida_automatico
+
+                    crear_bono_bienvenida_automatico(user)
                 # Auto-login
                 login(request, user)
                 messages.success(request, "¡Cuenta creada y verificado con éxito!")
@@ -108,11 +111,6 @@ class LogoutHTMLView(View):
     def get(self, request):
         logout(request)
         return redirect("login_html")
-
-
-class HomeHTMLView(LoginRequiredMixin, TemplateView):
-    template_name = "accounts/index.html"
-    login_url = "login_html"
 
 
 class KYCSuccessHTMLView(LoginRequiredMixin, TemplateView):

@@ -42,7 +42,6 @@ def actualizar_rollover_apuesta(apuesta):
         bono.rollover_apostado += monto_cuenta
 
         if bono.rollover_completado:
-            from config.choices import EstadoBono
             bono.estado = EstadoBono.COMPLETADO
 
         bono.save()
@@ -81,12 +80,12 @@ def get_bono_info_usuario(usuario):
         info.append({
             "bono_id": str(bono.id),
             "tipo": bono.tipo,
-            "monto": str(bono.monto),
-            "rollover_requerido": str(bono.rollover_requerido),
-            "rollover_apostado": str(bono.rollover_apostado),
-            "rollover_progreso": str(bono.rollover_progreso),
+            "monto": bono.monto,
+            "rollover_requerido": bono.rollover_requerido,
+            "rollover_apostado": bono.rollover_apostado,
+            "rollover_progreso": bono.rollover_progreso,
             "rollover_completado": bono.rollover_completado,
-            "expira": bono.expira.isoformat() if bono.expira else None,
+            "expira": bono.expira,
         })
 
     return info

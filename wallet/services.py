@@ -98,6 +98,13 @@ def retirar(user, amount):
     monto = validar_monto_positivo(amount)
     obtener_perfil_usuario(user)
 
+    from panel.rollover import tiene_bono_activo_sin_rollover
+    if tiene_bono_activo_sin_rollover(user):
+        raise ValidationError(
+            "No se puede retirar mientras tengas un bono activo con rollover pendiente. "
+            "Completa el rollover o espera a que expire el bono."
+        )
+
     LedgerEntry.objects.select_for_update().filter(
         usuario=user, cuenta=TipoCuenta.WALLET_USUARIO
     )

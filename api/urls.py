@@ -17,6 +17,7 @@ from betting.api_views import (
     CatalogoEventosAPIView,
     CrearApuestaAPIView,
 )
+from panel.urls import api_urlpatterns as panel_api_urls
 
 urlpatterns = [
     # OpenAPI Schema

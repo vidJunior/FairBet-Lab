@@ -27,6 +27,26 @@ class TipoCuenta(models.TextChoices):
     CASA = "casa", "Casa de Apuestas"
     APUESTAS_PENDIENTES = "apuestas_pendientes", "Apuestas Pendientes"
     BONOS = "bonos", "Bonos"
+    BONOS_USUARIO = "bonos_usuario", "Bonos del Usuario"
+
+
+class TipoBono(models.TextChoices):
+    BIENVENIDA = "bienvenida", "Bono de Bienvenida"
+    RECARGA = "recarga", "Bono de Recarga"
+    MANUAL = "manual", "Bono Manual (Operador)"
+
+
+class EstadoBono(models.TextChoices):
+    ACTIVO = "activo", "Activo"
+    COMPLETADO = "completado", "Completado"
+    EXPIRADO = "expirado", "Expirado"
+    REVOCADO = "revocado", "Revocado por Abuso"
+
+
+class TipoAlertaAbuso(models.TextChoices):
+    RISK_FREE = "risk_free", "Apuesta Sin Riesgo"
+    MATCHED_BETTING = "matched_betting", "Matched Betting"
+    ARBITRAGE = "arbitrage", "Arbitraje"
 
 
 class Direccion(models.TextChoices):

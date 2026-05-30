@@ -1,0 +1,100 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Reporte Mensual - FairBet</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+</head>
+<body class="bg-gray-900 text-white min-h-screen">
+    <nav class="bg-gray-800 border-b border-gray-700 px-6 py-4">
+        <div class="flex items-center justify-between">
+            <h1 class="text-2xl font-bold text-green-400">FairBet - Panel del Operador</h1>
+            <div class="flex gap-4">
+                <a href="{% url 'operator:dashboard' %}" class="px-3 py-2 rounded bg-gray-600 hover:bg-gray-700">Dashboard</a>
+                <a href="{% url 'operator:reporte_mensual' %}" class="px-3 py-2 rounded bg-blue-600 hover:bg-blue-700">Reporte Mensual</a>
+                <a href="/admin/" class="px-3 py-2 rounded bg-gray-600 hover:bg-gray-700">Admin</a>
+            </div>
+        </div>
+    </nav>
+
+    <main class="p-6 max-w-4xl mx-auto">
+        <h2 class="text-xl font-semibold mb-6">Reporte Mensual Exportable (Estilo MINCETUR)</h2>
+
+        <div class="bg-gray-800 rounded-lg p-6 border border-gray-700 mb-6">
+            <form method="get" class="flex gap-4 items-end">
+                <div>
+                    <label class="block text-sm text-gray-400 mb-1">Año</label>
+                    <input type="number" name="year" value="{{ year }}" min="2024" max="2030"
+                           class="bg-gray-700 border border-gray-600 rounded px-3 py-2 w-24">
+                </div>
+                <div>
+                    <label class="block text-sm text-gray-400 mb-1">Mes</label>
+                    <select name="month" class="bg-gray-700 border border-gray-600 rounded px-3 py-2">
+                        {% for num, nombre in meses %}
+                            <option value="{{ num }}" {% if num == month %}selected{% endif %}>{{ nombre }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <button type="submit" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded">
+                    Ver Resumen
+                </button>
+                <a href="?year={{ year }}&month={{ month }}&export=true"
+                   class="px-4 py-2 bg-green-600 hover:bg-green-700 rounded flex items-center gap-2">
+                    <i data-lucide="download" class="w-4 h-4"></i>
+                    Exportar CSV
+                </a>
+            </form>
+        </div>
+
+        <div class="bg-gray-800 rounded-lg p-6 border border-gray-700">
+            <h3 class="text-lg font-semibold mb-4">Resumen: {{ summary.mes }}</h3>
+
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <div class="bg-gray-700/50 rounded p-4">
+                    <p class="text-sm text-gray-400">Total Apostado</p>
+                    <p class="text-2xl font-bold text-yellow-400">S/ {{ summary.total_apostado }}</p>
+                </div>
+                <div class="bg-gray-700/50 rounded p-4">
+                    <p class="text-sm text-gray-400">Total Ganadas</p>
+                    <p class="text-2xl font-bold text-green-400">S/ {{ summary.total_ganadas_monto }}</p>
+                </div>
+                <div class="bg-gray-700/50 rounded p-4">
+                    <p class="text-sm text-gray-400">GGR del Mes</p>
+                    <p class="text-2xl font-bold text-blue-400">S/ {{ summary.ggr_mes }}</p>
+                </div>
+                <div class="bg-gray-700/50 rounded p-4">
+                    <p class="text-sm text-gray-400">N° Apuestas</p>
+                    <p class="text-2xl font-bold text-purple-400">{{ summary.num_apuestas }}</p>
+                </div>
+            </div>
+
+            <div class="mt-6 p-4 bg-gray-700/30 rounded border border-gray-600">
+                <h4 class="text-sm font-semibold text-gray-300 mb-2">Columnas del CSV Exportado:</h4>
+                <div class="grid grid-cols-2 md:grid-cols-4 gap-2 text-xs text-gray-400">
+                    <span>fecha</span>
+                    <span>tipo_juego</span>
+                    <span>tipo_apuesta</span>
+                    <span>evento_id</span>
+                    <span>evento</span>
+                    <span>mercado</span>
+                    <span>seleccion</span>
+                    <span>monto_apostado</span>
+                    <span>cuota</span>
+                    <span>monto_ganado</span>
+                    <span>ggr</span>
+                    <span>usuario_dni</span>
+                    <span>usuario_nombre</span>
+                    <span>estado_apuesta</span>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        lucide.createIcons();
+    </script>
+</body>
+</html>

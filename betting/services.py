@@ -11,6 +11,7 @@ from wallet.models import LedgerEntry
 from wallet.services import transferencia_interna, registrar_movimiento
 from betting.models import Evento, Seleccion, Apuesta, ApuestaSeleccion, Mercado
 from betting.tasks import reactivar_mercados_evento
+from panel.rollover import actualizar_rollover_apuesta
 
 
 def obtener_seleccion_ganadora_1x2(evento):
@@ -390,11 +391,13 @@ def liquidar_apuestas_evento(evento_id, seleccion_ganadora_id=None):
             registrar_movimiento(tid, None, TipoCuenta.CASA, user, TipoCuenta.WALLET_USUARIO, payout)
             apuesta.estado = EstadoApuesta.WON
             apuesta.save()
+            actualizar_rollover_apuesta(apuesta)
         else:
             tid = uuid.uuid4()
             registrar_movimiento(tid, user, TipoCuenta.APUESTAS_PENDIENTES, None, TipoCuenta.CASA, stake)
             apuesta.estado = EstadoApuesta.LOST
             apuesta.save()
+            actualizar_rollover_apuesta(apuesta)
 
     # Cambiar el estado del evento antes de evaluar las combinadas
     # para que las consultas y validaciones detecten el estado actualizado
@@ -440,6 +443,7 @@ def liquidar_apuestas_evento(evento_id, seleccion_ganadora_id=None):
             registrar_movimiento(tid, user, TipoCuenta.APUESTAS_PENDIENTES, None, TipoCuenta.CASA, combinada.monto)
             combinada.estado = EstadoApuesta.LOST
             combinada.save()
+            actualizar_rollover_apuesta(combinada)
             
         elif not has_pending:
             # Si no quedan partidos pendientes y no se ha perdido ninguno: combinada ganadora
@@ -451,6 +455,7 @@ def liquidar_apuestas_evento(evento_id, seleccion_ganadora_id=None):
             combinada.estado = EstadoApuesta.WON
             combinada.cuota_fijada = cuota_ajustada
             combinada.save()
+            actualizar_rollover_apuesta(combinada)
 
 
 
@@ -706,6 +711,7 @@ def liquidar_apuestas_resueltas_temprano(evento):
             registrar_movimiento(tid, None, TipoCuenta.CASA, user, TipoCuenta.WALLET_USUARIO, payout)
             apuesta.estado = EstadoApuesta.WON
             apuesta.save()
+            actualizar_rollover_apuesta(apuesta)
 
     for sel in selecciones_perdidas:
         apuestas = Apuesta.objects.filter(tipo="SIMPLE", seleccion=sel, estado=EstadoApuesta.ACCEPTED).select_related("usuario")
@@ -717,6 +723,7 @@ def liquidar_apuestas_resueltas_temprano(evento):
             registrar_movimiento(tid, user, TipoCuenta.APUESTAS_PENDIENTES, None, TipoCuenta.CASA, stake)
             apuesta.estado = EstadoApuesta.LOST
             apuesta.save()
+            actualizar_rollover_apuesta(apuesta)
 
     # Liquidar Combinadas que se pierden
     for sel in selecciones_perdidas:
@@ -728,6 +735,7 @@ def liquidar_apuestas_resueltas_temprano(evento):
             registrar_movimiento(tid, user, TipoCuenta.APUESTAS_PENDIENTES, None, TipoCuenta.CASA, combinada.monto)
             combinada.estado = EstadoApuesta.LOST
             combinada.save()
+            actualizar_rollover_apuesta(combinada)
 
     # Las combinadas con selecciones ganadas se dejan pendientes hasta que TODAS las selecciones de ese ticket estén resueltas
     # (esto lo maneja liquidar_apuestas_evento al final)

@@ -1,0 +1,172 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard del Operador - FairBet</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+</head>
+<body class="bg-gray-900 text-white min-h-screen">
+    <nav class="bg-gray-800 border-b border-gray-700 px-6 py-4">
+        <div class="flex items-center justify-between">
+            <h1 class="text-2xl font-bold text-green-400">FairBet - Panel del Operador</h1>
+            <div class="flex gap-4">
+                <a href="{% url 'operator:dashboard' %}" class="px-3 py-2 rounded bg-green-600 hover:bg-green-700">Dashboard</a>
+                <a href="{% url 'operator:reporte_mensual' %}" class="px-3 py-2 rounded bg-blue-600 hover:bg-blue-700">Reporte Mensual</a>
+                <a href="/admin/operator/alertaabuso/" class="px-3 py-2 rounded bg-red-600 hover:bg-red-700">Alertas</a>
+                <a href="/admin/" class="px-3 py-2 rounded bg-gray-600 hover:bg-gray-700">Admin</a>
+            </div>
+        </div>
+    </nav>
+
+    <main class="p-6 max-w-7xl mx-auto">
+        <div class="flex items-center justify-between mb-6">
+            <h2 class="text-xl font-semibold">Métricas en Vivo</h2>
+            <span class="text-sm text-gray-400" id="last-update">Actualizado: --</span>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+            <div class="bg-gray-800 rounded-lg p-6 border border-gray-700">
+                <div class="flex items-center justify-between mb-2">
+                    <span class="text-gray-400 text-sm">GGR (24h)</span>
+                    <i data-lucide="trending-up" class="w-5 h-5 text-green-400"></i>
+                </div>
+                <p class="text-3xl font-bold text-green-400" id="ggr-24h">S/ {{ metrics.ggr_24h }}</p>
+            </div>
+
+            <div class="bg-gray-800 rounded-lg p-6 border border-gray-700">
+                <div class="flex items-center justify-between mb-2">
+                    <span class="text-gray-400 text-sm">GGR (7d)</span>
+                    <i data-lucide="bar-chart-3" class="w-5 h-5 text-blue-400"></i>
+                </div>
+                <p class="text-3xl font-bold text-blue-400" id="ggr-7d">S/ {{ metrics.ggr_7d }}</p>
+            </div>
+
+            <div class="bg-gray-800 rounded-lg p-6 border border-gray-700">
+                <div class="flex items-center justify-between mb-2">
+                    <span class="text-gray-400 text-sm">Volumen (24h)</span>
+                    <i data-lucide="coins" class="w-5 h-5 text-yellow-400"></i>
+                </div>
+                <p class="text-3xl font-bold text-yellow-400" id="volume-24h">S/ {{ metrics.volume_24h.total_staked }}</p>
+                <p class="text-sm text-gray-500 mt-1" id="total-bets">{{ metrics.volume_24h.total_apuestas }} apuestas</p>
+            </div>
+
+            <div class="bg-gray-800 rounded-lg p-6 border border-gray-700">
+                <div class="flex items-center justify-between mb-2">
+                    <span class="text-gray-400 text-sm">Usuarios Activos</span>
+                    <i data-lucide="users" class="w-5 h-5 text-purple-400"></i>
+                </div>
+                <p class="text-3xl font-bold text-purple-400" id="active-1h">{{ metrics.active_users_1h }}</p>
+                <p class="text-sm text-gray-500 mt-1">última hora ({{ metrics.active_users_24h }} en 24h)</p>
+            </div>
+        </div>
+
+        <div class="bg-gray-800 rounded-lg p-6 border border-gray-700 mb-8">
+            <h3 class="text-lg font-semibold mb-4">Exposure por Evento</h3>
+            <p class="text-sm text-gray-400 mb-4">Total expuesto: <span class="text-red-400 font-bold" id="total-exposure">S/ {{ metrics.total_exposure }}</span></p>
+
+            <div class="overflow-x-auto">
+                <table class="w-full text-sm">
+                    <thead class="border-b border-gray-700">
+                        <tr>
+                            <th class="text-left py-2 px-3 text-gray-400">Evento</th>
+                            <th class="text-left py-2 px-3 text-gray-400">Estado</th>
+                            <th class="text-right py-2 px-3 text-gray-400">Exposure</th>
+                            <th class="text-left py-2 px-3 text-gray-400">Selecciones</th>
+                        </tr>
+                    </thead>
+                    <tbody id="exposure-table">
+                        {% for evento in metrics.exposure_by_event %}
+                        <tr class="border-b border-gray-700/50 hover:bg-gray-700/30">
+                            <td class="py-3 px-3 font-medium">{{ evento.evento_nombre }}</td>
+                            <td class="py-3 px-3">
+                                {% if evento.estado == 'en_vivo' %}
+                                    <span class="px-2 py-1 rounded text-xs bg-red-600/20 text-red-400">EN VIVO - Min {{ evento.minuto }}</span>
+                                {% else %}
+                                    <span class="px-2 py-1 rounded text-xs bg-blue-600/20 text-blue-400">PROGRAMADO</span>
+                                {% endif %}
+                            </td>
+                            <td class="py-3 px-3 text-right font-mono text-red-400">S/ {{ evento.total_exposure }}</td>
+                            <td class="py-3 px-3 text-xs text-gray-400">
+                                {% for sel in evento.selecciones|slice:":3" %}
+                                    <span class="inline-block mr-2">{{ sel.seleccion_nombre }}: S/ {{ sel.exposure }}</span>
+                                {% endfor %}
+                                {% if evento.selecciones|length > 3 %}
+                                    <span class="text-gray-500">+{{ evento.selecciones|length|add:"-3" }} más</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="4" class="py-4 text-center text-gray-500">No hay eventos con exposure activo</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div class="bg-gray-800 rounded-lg p-6 border border-gray-700">
+                <h3 class="text-lg font-semibold mb-4">Resumen Apuestas (24h)</h3>
+                <div class="space-y-3">
+                    <div class="flex justify-between">
+                        <span class="text-gray-400">Ganadas</span>
+                        <span class="text-green-400 font-mono" id="won-bets">{{ metrics.volume_24h.apuestas_ganadas }}</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span class="text-gray-400">Perdidas</span>
+                        <span class="text-red-400 font-mono" id="lost-bets">{{ metrics.volume_24h.apuestas_perdidas }}</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span class="text-gray-400">Pendientes</span>
+                        <span class="text-yellow-400 font-mono" id="pending-bets">{{ metrics.volume_24h.apuestas_pendientes }}</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="bg-gray-800 rounded-lg p-6 border border-gray-700">
+                <h3 class="text-lg font-semibold mb-4">Acciones Rápidas</h3>
+                <div class="space-y-3">
+                    <a href="{% url 'operator:reporte_mensual' %}" class="block w-full text-center px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded">
+                        Exportar Reporte Mensual CSV
+                    </a>
+                    <a href="/admin/operator/bono/add/" class="block w-full text-center px-4 py-2 bg-green-600 hover:bg-green-700 rounded">
+                        Crear Bono Promocional
+                    </a>
+                    <a href="/admin/operator/alertaabuso/?revisado__exact=0" class="block w-full text-center px-4 py-2 bg-red-600 hover:bg-red-700 rounded">
+                        Ver Alertas de Abuso Pendientes
+                    </a>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        lucide.createIcons();
+
+        function updateMetrics() {
+            fetch('/api/operator/metrics/')
+                .then(r => r.json())
+                .then(data => {
+                    document.getElementById('ggr-24h').textContent = 'S/ ' + data.ggr_24h;
+                    document.getElementById('ggr-7d').textContent = 'S/ ' + data.ggr_7d;
+                    document.getElementById('volume-24h').textContent = 'S/ ' + data.volume_24h.total_staked;
+                    document.getElementById('total-bets').textContent = data.volume_24h.total_apuestas + ' apuestas';
+                    document.getElementById('active-1h').textContent = data.active_users_1h;
+                    document.getElementById('total-exposure').textContent = 'S/ ' + data.total_exposure;
+                    document.getElementById('won-bets').textContent = data.volume_24h.apuestas_ganadas;
+                    document.getElementById('lost-bets').textContent = data.volume_24h.apuestas_perdidas;
+                    document.getElementById('pending-bets').textContent = data.volume_24h.apuestas_pendientes;
+                    document.getElementById('last-update').textContent = 'Actualizado: ' + new Date().toLocaleTimeString();
+                })
+                .catch(err => console.error('Error fetching metrics:', err));
+        }
+
+        setInterval(updateMetrics, 10000);
+        updateMetrics();
+    </script>
+</body>
+</html>
